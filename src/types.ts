@@ -11,6 +11,8 @@ export interface AppItem {
   status: 'active' | 'inactive';
   sortOrder: number;
   description?: string;
+  apkFileName?: string;
+  buttonText?: string;
 }
 
 export interface SiteSettings {

@@ -184,7 +184,19 @@ export function App() {
     }
 
     if (app.downloadUrl) {
-      window.open(app.downloadUrl, '_blank', 'noopener,noreferrer');
+      // Direct APK file download & trigger Android package installer
+      const safeName = app.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const defaultFileName = `${safeName || 'app'}.apk`;
+      const fileName = app.apkFileName ? (app.apkFileName.endsWith('.apk') ? app.apkFileName : `${app.apkFileName}.apk`) : defaultFileName;
+
+      const link = document.createElement('a');
+      link.href = app.downloadUrl;
+      link.setAttribute('download', fileName);
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -346,10 +358,11 @@ export function App() {
                     type="button" 
                     className="btn-download-pill"
                     onClick={(e) => handleDownloadClick(e, app)}
-                    aria-label={`Download ${app.name}`}
+                    aria-label={`Download ${app.name} APK`}
+                    title={`Download ${app.name} APK`}
                   >
                     <CloudDownload size={14} strokeWidth={2.4} />
-                    <span>Download</span>
+                    <span>{app.buttonText || 'Download APK'}</span>
                   </button>
                 </div>
               </div>

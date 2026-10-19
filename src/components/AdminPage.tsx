@@ -3,14 +3,14 @@ import {
   Rocket, Plus, Edit2, Trash2, ExternalLink, ShieldCheck, 
   Settings as SettingsIcon, Key, RotateCcw, Image as ImageIcon, 
   Check, AlertCircle, Database, RefreshCw, ArrowLeft, LogOut, 
-  Search, Eye, EyeOff, Layers, Download, CheckCircle2 
+  Search, Eye, EyeOff, Layers, Download, CheckCircle2, Upload, Package 
 } from 'lucide-react';
 import { AppItem, SiteSettings } from '../types';
 import { INITIAL_APPS, changeAdminPassword, verifyAdminPassword } from '../data';
 import { 
   getSupabaseCredentials, saveSupabaseCredentials, isSupabaseConfigured,
   fetchSupabaseApps, upsertSupabaseApp, deleteSupabaseApp, 
-  fetchSupabaseSettings, updateSupabaseSettings 
+  fetchSupabaseSettings, updateSupabaseSettings, uploadSupabaseApk 
 } from '../supabaseClient';
 import './AdminPage.css';
 
@@ -55,6 +55,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [sortOrder, setSortOrder] = useState(0);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [description, setDescription] = useState('');
+  const [apkFileName, setApkFileName] = useState('');
+  const [buttonText, setButtonText] = useState('Download APK');
+  const [isUploadingApk, setIsUploadingApk] = useState(false);
+  const apkFileInputRef = useRef<HTMLInputElement>(null);
   const [formSuccess, setFormSuccess] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -130,11 +134,49 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
   };
 
+  // Handle APK File Upload
+  const handleApkFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingApk(true);
+    setFormError('');
+    setFormSuccess('');
+
+    // Auto-calculate size in MB
+    const calculatedSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+    setSize(calculatedSize);
+    setApkFileName(file.name);
+
+    // Try Supabase Storage upload if available
+    if (isSupabaseConfigured()) {
+      try {
+        const publicUrl = await uploadSupabaseApk(file);
+        if (publicUrl) {
+          setDownloadUrl(publicUrl);
+          setIsUploadingApk(false);
+          setFormSuccess(`APK "${file.name}" uploaded to cloud storage successfully!`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Supabase storage fallback', err);
+      }
+    }
+
+    // Direct object URL for local / immediate download & installation
+    const objectUrl = URL.createObjectURL(file);
+    setDownloadUrl(objectUrl);
+    setIsUploadingApk(false);
+    setFormSuccess(`APK "${file.name}" (${calculatedSize}) attached and ready for download/install!`);
+  };
+
   // Start Editing App
   const handleEditClick = (app: AppItem) => {
     setEditingAppId(app.id);
     setName(app.name);
     setDownloadUrl(app.downloadUrl);
+    setApkFileName(app.apkFileName || '');
+    setButtonText(app.buttonText || 'Download APK');
     setLogo(app.logo);
     setLogoPreview(app.logo);
     setRating(app.rating);
@@ -155,6 +197,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setEditingAppId(null);
     setName('');
     setDownloadUrl('');
+    setApkFileName('');
+    setButtonText('Download APK');
     setLogo('');
     setLogoPreview('');
     setRating(4.9);
@@ -176,7 +220,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       return;
     }
     if (!downloadUrl.trim()) {
-      setFormError('Download link is required.');
+      setFormError('Download link or APK file is required.');
       return;
     }
 
@@ -186,6 +230,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         id: editingAppId,
         name: name.trim(),
         downloadUrl: downloadUrl.trim(),
+        apkFileName: apkFileName.trim() || undefined,
+        buttonText: buttonText.trim() || 'Download APK',
         logo: logo.trim() || '/uploads/logos/nexo.svg',
         rating: Number(rating) || 4.9,
         badge: badge.trim() || 'Verified',
@@ -215,6 +261,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         id: 'app-' + Date.now(),
         name: name.trim(),
         downloadUrl: downloadUrl.trim(),
+        apkFileName: apkFileName.trim() || undefined,
+        buttonText: buttonText.trim() || 'Download APK',
         logo: logo.trim() || '/uploads/logos/nexo.svg',
         rating: Number(rating) || 4.9,
         badge: badge.trim() || 'Verified',
@@ -860,31 +908,93 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     />
                   </div>
 
-                  {/* Target Download Link */}
-                  <div className="form-col-full">
-                    <label className="field-label">Download Button Link / URL *</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* APK Upload & Download Configuration */}
+                  <div className="form-col-full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <label className="field-label" style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Package size={18} color="#4f46e5" />
+                          <span>APK File Upload &amp; Download Setup *</span>
+                        </label>
+                        <span className="field-help" style={{ margin: '3px 0 0 0' }}>
+                          Upload an .apk file directly from your device, or paste an external download link.
+                        </span>
+                      </div>
+
+                      {/* Hidden APK File Input */}
                       <input 
-                        type="url" 
-                        className="field-input" 
-                        placeholder="https://example.com/download/app.apk or drive/mediafire link"
-                        value={downloadUrl}
-                        onChange={e => setDownloadUrl(e.target.value)}
-                        required
+                        type="file" 
+                        ref={apkFileInputRef} 
+                        accept=".apk,application/vnd.android.package-archive" 
+                        onChange={handleApkFileChange} 
+                        style={{ display: 'none' }} 
                       />
-                      {downloadUrl && (
-                        <a 
-                          href={downloadUrl} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="btn-secondary-light"
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <ExternalLink size={15} /> Test
-                        </a>
-                      )}
+
+                      <button 
+                        type="button" 
+                        className="btn-primary-purple" 
+                        style={{ padding: '8px 16px', fontSize: '0.84rem' }}
+                        onClick={() => apkFileInputRef.current?.click()}
+                        disabled={isUploadingApk}
+                      >
+                        <Upload size={15} />
+                        <span>{isUploadingApk ? 'Attaching APK...' : 'Upload .APK File'}</span>
+                      </button>
                     </div>
-                    <span className="field-help">Visitors will directly open this link when clicking the Download button.</span>
+
+                    {apkFileName && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#065f46', fontWeight: 600 }}>
+                          <CheckCircle2 size={16} color="#059669" />
+                          <span>Attached APK: <strong>{apkFileName}</strong> ({size})</span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => { setApkFileName(''); setDownloadUrl(''); }}
+                          style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label className="field-label" style={{ fontSize: '0.82rem' }}>Download URL / APK Link *</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input 
+                            type="text" 
+                            className="field-input" 
+                            placeholder="https://example.com/app.apk or uploaded file"
+                            value={downloadUrl}
+                            onChange={e => setDownloadUrl(e.target.value)}
+                            required
+                          />
+                          {downloadUrl && (
+                            <a 
+                              href={downloadUrl} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="btn-secondary-light"
+                              style={{ whiteSpace: 'nowrap' }}
+                            >
+                              <ExternalLink size={15} /> Test
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="field-label" style={{ fontSize: '0.82rem' }}>Button Text</label>
+                        <input 
+                          type="text" 
+                          className="field-input" 
+                          placeholder="Download APK" 
+                          value={buttonText}
+                          onChange={e => setButtonText(e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Logo Upload Box */}

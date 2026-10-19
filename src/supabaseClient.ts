@@ -62,7 +62,9 @@ function rowToAppItem(row: any): AppItem {
     downloads: Number(row.downloads) || 0,
     status: (row.status === 'inactive' ? 'inactive' : 'active'),
     sortOrder: Number(row.sort_order) || 0,
-    description: row.description || ''
+    description: row.description || '',
+    apkFileName: row.apk_file_name || undefined,
+    buttonText: row.button_text || undefined
   };
 }
 
@@ -80,8 +82,40 @@ function appItemToRow(app: AppItem): any {
     downloads: app.downloads,
     status: app.status,
     sort_order: app.sortOrder,
-    description: app.description || ''
+    description: app.description || '',
+    apk_file_name: app.apkFileName || null,
+    button_text: app.buttonText || null
   };
+}
+
+/**
+ * Upload an APK file directly to Supabase storage if available
+ */
+export async function uploadSupabaseApk(file: File): Promise<string | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  try {
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `apks/${Date.now()}_${cleanName}`;
+    const { error } = await client.storage
+      .from('apks')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: 'application/vnd.android.package-archive'
+      });
+
+    if (error) {
+      console.warn('Storage upload fallback (bucket may not exist):', error.message);
+      return null;
+    }
+
+    const { data } = client.storage.from('apks').getPublicUrl(filePath);
+    return data.publicUrl;
+  } catch (err) {
+    console.error('Error uploading APK to Supabase:', err);
+    return null;
+  }
 }
 
 /**
