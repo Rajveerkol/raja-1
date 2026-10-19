@@ -77,13 +77,14 @@ export function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
         e.preventDefault();
-        setIsAdminOpen(prev => !prev);
+        if (isAdminOpen) closeAdmin();
+        else openAdmin();
       } else if (e.key === '/' && document.activeElement !== searchInputRef.current && !isAdminOpen) {
         e.preventDefault();
         searchInputRef.current?.focus();
       } else if (e.key === 'Escape') {
         if (isAdminOpen) {
-          setIsAdminOpen(false);
+          closeAdmin();
         } else if (searchQuery) {
           setSearchQuery('');
         }
@@ -94,19 +95,41 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAdminOpen, searchQuery]);
 
-  // Check URL hash for #admin
-  useEffect(() => {
-    if (window.location.hash === '#admin') {
-      setIsAdminOpen(true);
+  const openAdmin = () => {
+    setIsAdminOpen(true);
+    if (window.location.pathname.toLowerCase() !== '/admin') {
+      window.history.pushState({}, '', '/admin');
     }
+  };
 
-    const handleHashChange = () => {
-      if (window.location.hash === '#admin') {
+  const closeAdmin = () => {
+    setIsAdminOpen(false);
+    if (window.location.pathname.toLowerCase().startsWith('/admin')) {
+      window.history.pushState({}, '', '/');
+    }
+    if (window.location.hash.toLowerCase() === '#admin') {
+      window.history.pushState({}, '', window.location.pathname);
+    }
+  };
+
+  // Check URL pathname (/admin) or hash (#admin)
+  useEffect(() => {
+    const checkRoute = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path === '/admin' || path === '/admin/' || hash === '#admin') {
         setIsAdminOpen(true);
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+
+    checkRoute();
+
+    window.addEventListener('popstate', checkRoute);
+    window.addEventListener('hashchange', checkRoute);
+    return () => {
+      window.removeEventListener('popstate', checkRoute);
+      window.removeEventListener('hashchange', checkRoute);
+    };
   }, []);
 
   // Filter apps (only active apps on public view)
@@ -164,7 +187,7 @@ export function App() {
     setSecretClicks(prev => {
       const next = prev + 1;
       if (next >= 3) {
-        setIsAdminOpen(true);
+        openAdmin();
         return 0;
       }
       return next;
@@ -216,7 +239,7 @@ export function App() {
                 <button 
                   type="button" 
                   className="btn-clear-search" 
-                  onClick={() => setIsAdminOpen(true)}
+                  onClick={openAdmin}
                   title="Open Admin Panel"
                   style={{ color: '#6366f1' }}
                 >
@@ -353,11 +376,11 @@ export function App() {
       </footer>
 
       {/* ==================================================================
-          Admin Modal (Accessible via #admin or Ctrl+Shift+A or secret click)
+          Admin Modal (Accessible via /admin, #admin, Ctrl+Shift+A)
           ================================================================== */}
       <AdminModal 
         isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
+        onClose={closeAdmin}
         apps={apps}
         setApps={setApps}
         settings={settings}

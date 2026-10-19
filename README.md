@@ -12,15 +12,15 @@ Official repository for **Raxo** ([https://raxo.online](https://raxo.online)) �
 
 ---
 
-## 🔑 Admin Panel & Security
+## 🔑 Admin Panel Access & Security
 
-- **User Header:** Public visitors do NOT see any admin button (completely clean, visitor-focused UI).
-- **Accessing Admin Panel:**
-  - **Direct URL:** [https://raxo.online/#admin](https://raxo.online/#admin)
-  - **Keyboard Shortcut:** Press `Ctrl + Shift + A` (Mac: `Cmd + Shift + A`)
-  - **Search Trigger:** Search bar me `admin` type karein aur Lock 🔒 icon par click karein
-  - **Footer Trigger:** Footer me "v2.0" par 3 baar click karein
-- **Default Admin Password:** `admin123`
+- **Direct URL:** [https://raxo.online/admin](https://raxo.online/admin) (or `http://localhost:3000/admin`)
+- **Default Password:** `admin123`
+- **Other Shortcuts:**
+  - Keyboard shortcut: `Ctrl + Shift + A` (Mac: `Cmd + Shift + A`)
+  - Search trigger: Search bar me `admin` likhein aur Lock 🔒 icon dabayein
+  - Footer trigger: Footer me "v2.0" par 3 baar click karein
+- **Public Header:** Visitors ke liye koi admin button nahi dikhta (bilkul clean UI).
 
 ---
 
