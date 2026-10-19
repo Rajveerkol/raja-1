@@ -222,13 +222,13 @@
 .card-app {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  padding: 16px 18px;
-  box-shadow: var(--shadow-card);
+  border-radius: 20px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
@@ -244,21 +244,21 @@
 }
 
 .card-app:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: rgba(99, 102, 241, 0.35);
   box-shadow: var(--shadow-card-hover);
 }
 
 /* App Icon */
 .card-icon-wrap {
-  width: 62px;
-  height: 62px;
-  border-radius: var(--radius-icon);
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
   background: #0f172a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,7 +266,7 @@
 }
 
 .card-app:hover .card-icon-wrap {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 .card-icon-img {
@@ -282,25 +282,31 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 4px;
+  overflow: hidden;
 }
 
 .card-title {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 800;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.3px;
+  line-height: 1.25;
 }
 
 .card-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.84rem;
+  gap: 5px;
+  font-size: 0.8rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rating-badge {
@@ -308,7 +314,8 @@
   align-items: center;
   gap: 3px;
   font-weight: 700;
-  color: #334155;
+  color: #1e293b;
+  flex-shrink: 0;
 }
 
 .star-icon {
@@ -318,15 +325,17 @@
 
 .meta-bullet {
   color: #cbd5e1;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 .verified-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: #059669;
+  flex-shrink: 0;
 }
 
 .verified-icon {
@@ -336,33 +345,39 @@
 /* Download Pill Button */
 .card-action {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+  z-index: 2;
 }
 
 .btn-download-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--primary-gradient);
   color: #ffffff;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 700;
-  padding: 10px 20px;
-  border-radius: var(--radius-btn);
+  padding: 8px 16px;
+  border-radius: 9999px;
   border: none;
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .btn-download-pill:hover {
   background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.48);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
 }
 
 .btn-download-pill:active {
@@ -1183,32 +1198,56 @@
   }
 
   .main-wrapper {
-    padding: 6px 16px 40px;
+    padding: 4px 12px 36px;
   }
 
-  /* Polish app cards layout matching mobile reference */
+  /* Compact modern cards layout with clean spacing that prevents any text overlap */
   .card-app {
-    padding: 14px 16px;
-    gap: 14px;
-    border-radius: 18px;
+    padding: 10px 12px;
+    gap: 10px;
+    border-radius: 16px;
   }
 
   .card-icon-wrap {
-    width: 58px;
-    height: 58px;
-    border-radius: 15px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .card-info {
+    gap: 3px;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .card-title {
-    font-size: 1.05rem;
+    font-size: 0.96rem;
     font-weight: 800;
   }
 
+  .card-meta {
+    gap: 4px;
+    font-size: 0.77rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rating-badge {
+    gap: 2px;
+  }
+
+  .verified-badge {
+    gap: 2px;
+  }
+
   .btn-download-pill {
-    padding: 9px 18px;
-    font-size: 0.88rem;
-    gap: 6px;
+    padding: 7px 13px;
+    font-size: 0.8rem;
+    gap: 5px;
     border-radius: 9999px;
+    flex-shrink: 0;
   }
 
   /* Footer on mobile */
@@ -1217,7 +1256,7 @@
   }
 
   .footer-nav-link {
-    font-size: 0.98rem;
+    font-size: 0.96rem;
   }
 
   .footer-copy-text {
@@ -1227,7 +1266,7 @@
   /* Modals on mobile */
   .contact-layout-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 20px;
   }
 
   .legal-modal-card {
@@ -1236,7 +1275,7 @@
   }
 
   .legal-modal-body {
-    padding: 20px;
+    padding: 18px;
   }
 
   .admin-form-grid {
@@ -1245,6 +1284,10 @@
 }
 
 @media (max-width: 400px) {
+  .main-wrapper {
+    padding: 4px 8px 36px;
+  }
+
   .brand-title {
     font-size: 1.65rem;
   }
@@ -1255,21 +1298,29 @@
   }
 
   .card-app {
-    padding: 12px 12px;
-    gap: 12px;
+    padding: 9px 10px;
+    gap: 8px;
+    border-radius: 14px;
   }
 
   .card-icon-wrap {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
   }
 
   .card-title {
-    font-size: 0.98rem;
+    font-size: 0.92rem;
+  }
+
+  .card-meta {
+    font-size: 0.73rem;
+    gap: 3px;
   }
 
   .btn-download-pill {
-    padding: 8px 14px;
-    font-size: 0.82rem;
+    padding: 6px 11px;
+    font-size: 0.76rem;
+    gap: 4px;
   }
 }

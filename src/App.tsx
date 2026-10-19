@@ -329,12 +329,12 @@ export function App() {
                   </h3>
                   <div className="card-meta">
                     <span className="rating-badge">
-                      <Star size={13} className="star-icon" />
+                      <Star size={12} className="star-icon" />
                       <span>{app.rating.toFixed(1)}</span>
                     </span>
                     <span className="meta-bullet">•</span>
                     <span className="verified-badge">
-                      <ShieldCheck size={13} className="verified-icon" />
+                      <ShieldCheck size={12} className="verified-icon" />
                       <span>{app.badge || 'Verified'}</span>
                     </span>
                   </div>
@@ -348,7 +348,7 @@ export function App() {
                     onClick={(e) => handleDownloadClick(e, app)}
                     aria-label={`Download ${app.name}`}
                   >
-                    <CloudDownload size={16} strokeWidth={2.4} />
+                    <CloudDownload size={14} strokeWidth={2.4} />
                     <span>Download</span>
                   </button>
                 </div>
