@@ -1,5 +1,5 @@
 -- ========================================================
--- Raxo - Supabase PostgreSQL Database Schema & Seed Data
+-- Appvizo - Supabase PostgreSQL Database Schema & Seed Data
 -- Run this in your Supabase Dashboard -> SQL Editor
 -- ========================================================
 
@@ -23,11 +23,11 @@ CREATE TABLE IF NOT EXISTS public.apps (
 -- 2. Create Settings Table
 CREATE TABLE IF NOT EXISTS public.settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
-    site_name TEXT DEFAULT 'Raxo',
+    site_name TEXT DEFAULT 'Appvizo',
     site_tagline TEXT DEFAULT 'Discover & Download Verified Apps & Games',
-    site_description TEXT DEFAULT 'Raxo provides fast and safe direct download links for top trending games and utilities.',
-    footer_text TEXT DEFAULT '© 2026 Raxo. All rights reserved.',
-    telegram_link TEXT DEFAULT ''
+    site_description TEXT DEFAULT 'Appvizo provides fast and safe direct download links for top trending games and utilities.',
+    footer_text TEXT DEFAULT '© 2026 Appvizo. All rights reserved.',
+    telegram_link TEXT DEFAULT 'https://t.me/appvizo_official'
 );
 
 -- 3. Enable Row Level Security (RLS)
@@ -58,18 +58,21 @@ USING (true)
 WITH CHECK (true);
 
 -- 5. Insert Initial Settings
-INSERT INTO public.settings (id, site_name, site_tagline, site_description, footer_text)
+INSERT INTO public.settings (id, site_name, site_tagline, site_description, footer_text, telegram_link)
 VALUES (
     1, 
-    'Raxo', 
+    'Appvizo', 
     'Discover & Download Verified Apps & Games', 
-    'Raxo provides fast, safe and verified direct download links for the top trending games and utilities.', 
-    '© 2026 Raxo. All rights reserved.'
+    'Appvizo provides fast, safe and verified direct download links for the top trending games and utilities.', 
+    '© 2026 Appvizo. All rights reserved.',
+    'https://t.me/appvizo_official'
 )
 ON CONFLICT (id) DO UPDATE 
 SET site_name = EXCLUDED.site_name,
     site_tagline = EXCLUDED.site_tagline,
-    site_description = EXCLUDED.site_description;
+    site_description = EXCLUDED.site_description,
+    footer_text = EXCLUDED.footer_text,
+    telegram_link = EXCLUDED.telegram_link;
 
 -- 6. Insert Starter Apps (matching screenshot)
 INSERT INTO public.apps (id, name, logo, download_url, rating, badge, category, size, downloads, status, sort_order)

@@ -1,12 +1,12 @@
-# 🚀 Raxo (Raxo.online) - Ultra Modern Apps & Games Portal
+# 🚀 Appvizo - Ultra Modern Apps & Games Portal
 
-Official repository for **Raxo** ([https://raxo.online](https://raxo.online)) — A modern, high-performance Apps & Games directory built with **React 19 + TypeScript (TSX) + Supabase + Modern CSS**.
+Official repository for **Appvizo** — A modern, high-performance Apps & Games directory built with **React 19 + TypeScript (TSX) + Supabase + Modern CSS**.
 
 ---
 
-## 🌐 Live Domain & Configuration
+## 🌐 Domain & Configuration
 
-- **Official Domain:** [https://raxo.online](https://raxo.online)
+- **Brand:** Appvizo
 - **Supabase Cloud Project URL:** `https://mpxbnwcospmifvhcteqi.supabase.co`
 - **Database:** Supabase PostgreSQL with real-time sync & Row Level Security (RLS)
 
@@ -14,12 +14,12 @@ Official repository for **Raxo** ([https://raxo.online](https://raxo.online)) �
 
 ## 🔑 Admin Panel Access & Security
 
-- **Direct URL:** [https://raxo.online/admin](https://raxo.online/admin) (or `http://localhost:3000/admin`)
+- **Direct URL:** `/admin` (e.g. `https://your-domain/admin` or `http://localhost:3000/admin`)
 - **Default Password:** `admin123`
 - **Other Shortcuts:**
   - Keyboard shortcut: `Ctrl + Shift + A` (Mac: `Cmd + Shift + A`)
   - Search trigger: Search bar me `admin` likhein aur Lock 🔒 icon dabayein
-  - Footer trigger: Footer me "v2.0" par 3 baar click karein
+  - Footer trigger: Footer copyright text par 3 baar click karein
 - **Public Header:** Visitors ke liye koi admin button nahi dikhta (bilkul clean UI).
 
 ---
@@ -39,10 +39,12 @@ Your Supabase project is active and connected! To ensure the tables are initiali
 ## 🛠️ Project Structure
 
 ```text
-raxo/
+appvizo/
 ├── src/
 │   ├── components/
-│   │   └── AdminModal.tsx      # Admin modal with Supabase sync, App CRUD, and Settings
+│   │   ├── AdminPage.tsx       # Dedicated full-page Admin Portal
+│   │   ├── AdminPage.css       # Admin dashboard styles
+│   │   └── LegalModals.tsx     # Functional Privacy Policy, Terms, and Contact views
 │   ├── types.ts                # TypeScript interfaces (AppItem, SiteSettings)
 │   ├── data.ts                 # 12 Starter apps data + local fallback persistence
 │   ├── supabaseClient.ts       # Supabase client & live cloud synchronization
@@ -52,12 +54,13 @@ raxo/
 │   ├── main.tsx                # React 19 entrypoint
 │   └── vite-env.d.ts           # Vite client environment types
 ├── public/
+│   ├── 404.html                # Cloudflare Pages SPA fallback
 │   └── uploads/logos/          # 12 High-res starter vector SVG logos
 ├── dist/                       # Minified production build
 ├── supabase_schema.sql         # Supabase PostgreSQL schema & seed script
 ├── .env                        # Active environment configuration
 ├── .env.example                # Example environment file
-├── index.html                  # Root HTML with Raxo.online SEO & OpenGraph tags
+├── index.html                  # Root HTML with Appvizo SEO & OpenGraph tags
 ├── package.json                # Project dependencies and build scripts
 ├── tsconfig.json               # TypeScript compiler configuration
 └── vite.config.ts              # Vite configuration

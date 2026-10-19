@@ -172,20 +172,25 @@ export const INITIAL_APPS: AppItem[] = [
 ];
 
 export const INITIAL_SETTINGS: SiteSettings = {
-  siteName: 'Raxo',
+  siteName: 'Appvizo',
   siteTagline: 'Discover & Download Verified Apps & Games',
-  siteDescription: 'Raxo provides fast, safe and verified direct download links for top trending games, utilities, and apps.',
-  footerText: '© 2026 Raxo. All rights reserved.',
-  telegramLink: 'https://t.me/raxo_official'
+  siteDescription: 'Appvizo provides fast, safe and verified direct download links for top trending games, utilities, and apps.',
+  footerText: '© 2026 Appvizo. All rights reserved.',
+  telegramLink: 'https://t.me/appvizo_official'
 };
 
-const APPS_STORAGE_KEY = 'raxo_apps_data';
-const SETTINGS_STORAGE_KEY = 'raxo_site_settings';
-const PASSWORD_STORAGE_KEY = 'raxo_admin_password';
+const APPS_STORAGE_KEY = 'appvizo_apps_data';
+const SETTINGS_STORAGE_KEY = 'appvizo_site_settings';
+const PASSWORD_STORAGE_KEY = 'appvizo_admin_password';
+
+// Legacy keys for migration
+const LEGACY_APPS_STORAGE_KEY = 'raxo_apps_data';
+const LEGACY_SETTINGS_STORAGE_KEY = 'raxo_site_settings';
+const LEGACY_PASSWORD_STORAGE_KEY = 'raxo_admin_password';
 
 export function loadStoredApps(): AppItem[] {
   try {
-    const raw = localStorage.getItem(APPS_STORAGE_KEY);
+    const raw = localStorage.getItem(APPS_STORAGE_KEY) || localStorage.getItem(LEGACY_APPS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -208,9 +213,21 @@ export function saveStoredApps(apps: AppItem[]): void {
 
 export function loadStoredSettings(): SiteSettings {
   try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY) || localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
     if (raw) {
-      return { ...INITIAL_SETTINGS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      const merged: SiteSettings = { ...INITIAL_SETTINGS, ...parsed };
+      // Migrate legacy name if present
+      if (merged.siteName === 'Raxo') {
+        merged.siteName = 'Appvizo';
+      }
+      if (merged.footerText?.includes('Raxo')) {
+        merged.footerText = '© 2026 Appvizo. All rights reserved.';
+      }
+      if (merged.telegramLink?.includes('raxo')) {
+        merged.telegramLink = 'https://t.me/appvizo_official';
+      }
+      return merged;
     }
   } catch (err) {
     console.error('Error loading stored settings', err);
@@ -228,7 +245,7 @@ export function saveStoredSettings(settings: SiteSettings): void {
 
 export function verifyAdminPassword(inputPassword: string): boolean {
   try {
-    const savedPassword = localStorage.getItem(PASSWORD_STORAGE_KEY);
+    const savedPassword = localStorage.getItem(PASSWORD_STORAGE_KEY) || localStorage.getItem(LEGACY_PASSWORD_STORAGE_KEY);
     if (savedPassword) {
       return inputPassword.trim() === savedPassword.trim();
     }

@@ -202,11 +202,11 @@ export async function fetchSupabaseSettings(): Promise<SiteSettings | null> {
     if (error || !data) return null;
 
     return {
-      siteName: data.site_name || 'Raxo',
+      siteName: data.site_name === 'Raxo' ? 'Appvizo' : (data.site_name || 'Appvizo'),
       siteTagline: data.site_tagline || 'Discover & Download Verified Apps & Games',
-      siteDescription: data.site_description || 'Download verified safe apps and games with direct links on Raxo.',
-      footerText: data.footer_text || '© 2026 Raxo. All rights reserved.',
-      telegramLink: data.telegram_link || ''
+      siteDescription: data.site_description || 'Download verified safe apps and games with direct links on Appvizo.',
+      footerText: data.footer_text?.includes('Raxo') ? '© 2026 Appvizo. All rights reserved.' : (data.footer_text || '© 2026 Appvizo. All rights reserved.'),
+      telegramLink: data.telegram_link || 'https://t.me/appvizo_official'
     };
   } catch (err) {
     return null;

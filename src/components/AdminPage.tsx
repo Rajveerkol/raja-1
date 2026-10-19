@@ -31,7 +31,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 }) => {
   // Session authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('raxo_admin_auth') === 'true';
+    return sessionStorage.getItem('appvizo_admin_auth') === 'true' || sessionStorage.getItem('raxo_admin_auth') === 'true';
   });
 
   // Login form state
@@ -87,8 +87,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Save auth to sessionStorage
   useEffect(() => {
     if (isAuthenticated) {
-      sessionStorage.setItem('raxo_admin_auth', 'true');
+      sessionStorage.setItem('appvizo_admin_auth', 'true');
     } else {
+      sessionStorage.removeItem('appvizo_admin_auth');
       sessionStorage.removeItem('raxo_admin_auth');
     }
   }, [isAuthenticated]);
@@ -107,6 +108,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    sessionStorage.removeItem('appvizo_admin_auth');
     sessionStorage.removeItem('raxo_admin_auth');
   };
 
@@ -365,7 +367,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="login-brand-icon">
             <Rocket size={28} />
           </div>
-          <h1 className="login-title">Raxo Admin Portal</h1>
+          <h1 className="login-title">Appvizo Admin Portal</h1>
           <p className="login-subtitle">
             Sign in with your administrator password to manage applications, download links, and database settings.
           </p>
@@ -454,7 +456,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="admin-brand-title">Raxo</span>
+                <span className="admin-brand-title">Appvizo</span>
                 <span className="admin-badge-role">Admin Console</span>
                 {isSupabaseConfigured() && (
                   <span style={{ fontSize: '0.72rem', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -1044,7 +1046,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
             <div className="admin-form-container">
               <p style={{ color: '#64748b', fontSize: '0.92rem', marginBottom: '20px' }}>
-                Your Raxo application is connected to Supabase PostgreSQL cloud for live synchronization across all devices and visitors.
+                Your Appvizo application is connected to Supabase PostgreSQL cloud for live synchronization across all devices and visitors.
               </p>
 
               {sbStatus && (
@@ -1168,7 +1170,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     <input 
                       type="url" 
                       className="field-input" 
-                      placeholder="https://t.me/raxo_online"
+                      placeholder="https://t.me/appvizo_official"
                       value={telegramLink}
                       onChange={e => setTelegramLink(e.target.value)}
                     />

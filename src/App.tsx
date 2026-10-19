@@ -14,6 +14,7 @@ import {
   fetchSupabaseSettings, incrementSupabaseDownloads 
 } from './supabaseClient';
 import { AdminPage } from './components/AdminPage';
+import { LegalModals, LegalModalType } from './components/LegalModals';
 import './App.css';
 
 export function App() {
@@ -26,8 +27,22 @@ export function App() {
     return p === '/admin' || p.startsWith('/admin/') || h === '#admin';
   });
 
+  const [activeLegalModal, setActiveLegalModal] = useState<LegalModalType>(null);
   const [secretClicks, setSecretClicks] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Check URL hash for modal opening on load / change
+  useEffect(() => {
+    const handleHash = () => {
+      const h = window.location.hash.toLowerCase();
+      if (h === '#privacy') setActiveLegalModal('privacy');
+      else if (h === '#terms') setActiveLegalModal('terms');
+      else if (h === '#contact') setActiveLegalModal('contact');
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   // Initialize data (try Supabase first if configured, otherwise fallback to local)
   useEffect(() => {
@@ -214,14 +229,14 @@ export function App() {
             title={settings.siteName}
           >
             <div className="brand-icon-box">
-              <Rocket size={22} />
+              <Rocket size={28} />
             </div>
             <h1 className="brand-title">{settings.siteName}</h1>
           </div>
         </div>
       </header>
 
-      {/* Hero & Search Bar */}
+      {/* Hero & Search Bar (Clean floating search without verified app pill) */}
       <section className="hero-wrapper">
         <div className="search-container">
           <div className="search-glass-box">
@@ -266,14 +281,6 @@ export function App() {
               ) : (
                 <span className="kbd-shortcut" title="Press '/' to search">/</span>
               )}
-            </div>
-          </div>
-
-          {/* Status Pill */}
-          <div className="status-meta-row">
-            <div className="status-pill">
-              <span className="pulse-dot"></span>
-              <span>{visibleApps.length} {visibleApps.length === 1 ? 'Verified App' : 'Verified Apps'}</span>
             </div>
           </div>
         </div>
@@ -351,28 +358,80 @@ export function App() {
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Footer matching exact 4-row layout from reference */}
       <footer className="site-footer">
-        <div className="footer-content">
-          <p className="footer-copy">
-            {settings.footerText || '© 2026 Raxo. All rights reserved.'}
-          </p>
-          <div className="footer-tags">
-            <span>Fast &amp; Safe Direct Downloads</span>
-            <span>•</span>
-            <span>Verified Applications</span>
-            <span>•</span>
+        <div className="footer-layout">
+          {/* Row 1: Home   Privacy Policy   Terms of Service */}
+          <nav className="footer-links-row" aria-label="Footer Primary Navigation">
             <button 
               type="button" 
-              className="secret-trigger-btn"
-              onClick={handleSecretFooterClick}
-              title="Version 2.0"
+              className="footer-nav-link"
+              onClick={() => {
+                setSearchQuery('');
+                setActiveLegalModal(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
             >
-              v2.0
+              Home
             </button>
+            <button 
+              type="button" 
+              className="footer-nav-link"
+              onClick={() => setActiveLegalModal('privacy')}
+            >
+              Privacy Policy
+            </button>
+            <button 
+              type="button" 
+              className="footer-nav-link"
+              onClick={() => setActiveLegalModal('terms')}
+            >
+              Terms of Service
+            </button>
+          </nav>
+
+          {/* Row 2: Contact Us */}
+          <div className="footer-contact-row">
+            <button 
+              type="button" 
+              className="footer-nav-link"
+              onClick={() => setActiveLegalModal('contact')}
+            >
+              Contact Us
+            </button>
+          </div>
+
+          {/* Row 3: © 2026 Appvizo. All rights reserved. */}
+          <div className="footer-copy-row">
+            <p 
+              className="footer-copy-text"
+              onClick={handleSecretFooterClick}
+              title={settings.siteName}
+            >
+              {settings.footerText || `© 2026 ${settings.siteName}. All rights reserved.`}
+            </p>
+          </div>
+
+          {/* Row 4: Meta / Facebook Disclaimer */}
+          <div className="footer-disclaimer-row">
+            <p className="footer-disclaimer-text">
+              Disclaimer: This website is not part of the Facebook website or Meta Platforms, Inc. Additionally, this site is NOT endorsed by Facebook in any way. FACEBOOK is a trademark of META PLATFORMS, INC.
+            </p>
           </div>
         </div>
       </footer>
+
+      {/* Fully Functional Legal & Contact Modals */}
+      <LegalModals 
+        activeModal={activeLegalModal}
+        onClose={() => {
+          setActiveLegalModal(null);
+          if (window.location.hash.startsWith('#')) {
+            window.history.pushState(null, '', window.location.pathname);
+          }
+        }}
+        settings={settings}
+      />
     </div>
   );
 }
