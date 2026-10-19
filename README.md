@@ -1,89 +1,93 @@
-# 🚀 Appvizo - Ultra Modern React + TypeScript (TSX) Apps Directory & Portal
+# 🚀 Raxo (Raxo.online) - Ultra Modern Apps & Games Portal
 
-Ye **Appvizo** ka completely modernized **React + TypeScript (TSX) + Modern CSS** version hai. Isme PHP ko 100% remove kar diya gaya hai, category pills (All/Games/Utilities) ko remove kar diya gaya hai, aur user page se admin button ko hide kar diya gaya hai taaki public interface bilkul sleek, clean aur visitor-focused lage.
-
----
-
-## 🌟 Key Updates & Improvements
-
-1. **Category Pills (All/Games/Utilities) Removed:**
-   - Search bar ke neeche ke saare category filter buttons remove kar diye gaye hain. Ab interface bilkul clean aur distraction-free hai.
-2. **User Page se Admin Button Removed:**
-   - Public header me visitor ko koi admin button ya box nahi dikhega.
-   - **Admin Panel Access karne ke 4 Secret Tareeqe:**
-     - **Option 1 (Direct URL):** Browser me URL ke peeche `#admin` lagayein (e.g. `http://localhost:3000/#admin`).
-     - **Option 2 (Keyboard Shortcut):** Keyboard par `Ctrl + Shift + A` (Mac par `Cmd + Shift + A`) dabayein.
-     - **Option 3 (Search Trigger):** Search bar me `admin` type karein — right side me ek secret Lock 🔒 icon aayega, uspe click karein!
-     - **Option 4 (Footer Secret):** Footer me "v2.0" par 3 baar click karein!
-3. **Admin Password:**
-   - **Password:** `admin123`
-   - Unlock hote hi Admin Modal khulta hai jahan se aap:
-     - Nayi app add kar sakte hain (Name, direct download link, logo file upload ya URL, rating, badge, size).
-     - Kisi bhi app ko edit ya delete kar sakte hain.
-     - Starter apps ko 1-click me reset kar sakte hain.
-     - Site settings aur admin password update kar sakte hain.
-4. **100000x Better UI (Apple & Vercel Grade):**
-   - Soft ambient radial mesh gradient background with purple/indigo aura.
-   - Glassmorphic sticky header with glowing rocket logo.
-   - Floating search bar with keyboard shortcut (`/`) aur live count chip.
-   - Responsive Cards Grid (Desktop 3 columns, Tablet 2 columns, Mobile 1 column).
-   - High-fidelity rounded app cards with multi-layered shadows and hover micro-animations.
-   - **Confetti Download Button:** Download button click karne par colorful celebratory confetti blast hota hai aur direct target URL open hota hai!
-   - Download counter dynamic real-time increment.
+Official repository for **Raxo** ([https://raxo.online](https://raxo.online)) — A modern, high-performance Apps & Games directory built with **React 19 + TypeScript (TSX) + Supabase + Modern CSS**.
 
 ---
 
-## 📁 Project Structure
+## 🌐 Live Domain & Configuration
+
+- **Official Domain:** [https://raxo.online](https://raxo.online)
+- **Supabase Cloud Project URL:** `https://mpxbnwcospmifvhcteqi.supabase.co`
+- **Database:** Supabase PostgreSQL with real-time sync & Row Level Security (RLS)
+
+---
+
+## 🔑 Admin Panel & Security
+
+- **User Header:** Public visitors do NOT see any admin button (completely clean, visitor-focused UI).
+- **Accessing Admin Panel:**
+  - **Direct URL:** [https://raxo.online/#admin](https://raxo.online/#admin)
+  - **Keyboard Shortcut:** Press `Ctrl + Shift + A` (Mac: `Cmd + Shift + A`)
+  - **Search Trigger:** Search bar me `admin` type karein aur Lock 🔒 icon par click karein
+  - **Footer Trigger:** Footer me "v2.0" par 3 baar click karein
+- **Default Admin Password:** `admin123`
+
+---
+
+## ⚡ Supabase Setup Instructions (Important)
+
+Your Supabase project is active and connected! To ensure the tables are initialized in your database:
+
+1. Open your **Supabase Dashboard** at [supabase.com](https://supabase.com/dashboard/project/mpxbnwcospmifvhcteqi).
+2. Go to **SQL Editor** from the left sidebar.
+3. Open or copy the contents of `supabase_schema.sql` from this repository.
+4. Paste the SQL code into the editor and click **"Run"**.
+5. All tables (`apps`, `settings`), security policies, and 12 starter apps will be created immediately!
+
+---
+
+## 🛠️ Project Structure
 
 ```text
-eager-raman/
+raxo/
 ├── src/
 │   ├── components/
-│   │   └── AdminModal.tsx     # Full-featured Admin Modal (Add/Edit/Delete/Settings)
-│   ├── types.ts               # TypeScript Interfaces (AppItem, SiteSettings)
-│   ├── data.ts                # Default 12 starter apps & LocalStorage persistence
-│   ├── App.tsx                # Main application component (Search, Grid, Confetti)
-│   ├── App.css                # Component styling (Cards, Glassmorphism, Responsive)
-│   ├── index.css              # Global styles, fonts, design tokens
-│   └── main.tsx               # React 19 root entrypoint
+│   │   └── AdminModal.tsx      # Admin modal with Supabase sync, App CRUD, and Settings
+│   ├── types.ts                # TypeScript interfaces (AppItem, SiteSettings)
+│   ├── data.ts                 # 12 Starter apps data + local fallback persistence
+│   ├── supabaseClient.ts       # Supabase client & live cloud synchronization
+│   ├── App.tsx                 # Main application component
+│   ├── App.css                 # Component layout, responsive grid & animations
+│   ├── index.css               # Global theme tokens, typography, and styles
+│   ├── main.tsx                # React 19 entrypoint
+│   └── vite-env.d.ts           # Vite client environment types
 ├── public/
-│   └── uploads/logos/         # 12 Starter vector SVG logos
-├── dist/                      # Production build output
-├── database.sql               # Original SQL dump (reference)
-├── index.html                 # HTML template with SEO meta tags & fonts
-├── package.json               # Dependencies & scripts
-├── tsconfig.json              # TypeScript configuration
-├── vite.config.ts             # Vite build configuration
-└── README.md                  # Documentation
+│   └── uploads/logos/          # 12 High-res starter vector SVG logos
+├── dist/                       # Minified production build
+├── supabase_schema.sql         # Supabase PostgreSQL schema & seed script
+├── .env                        # Active environment configuration
+├── .env.example                # Example environment file
+├── index.html                  # Root HTML with Raxo.online SEO & OpenGraph tags
+├── package.json                # Project dependencies and build scripts
+├── tsconfig.json               # TypeScript compiler configuration
+└── vite.config.ts              # Vite configuration
 ```
 
 ---
 
-## ⚡ How to Run Locally
+## 💻 Local Development
 
-### 1. Development Mode:
-```bash
-npm run dev
-```
-Browser me open karein: `http://localhost:3000`
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start dev server:
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:3000`
 
-### 2. Production Build:
-```bash
-npm run build
-```
-Production ready static files `dist/` folder me generate ho jayengi jise aap Vercel, Netlify, Cloudflare Pages, cPanel ya kisi bhi hosting par direct drag-and-drop deploy kar sakte hain!
-
-### 3. Preview Production Build:
-```bash
-npm run preview
-```
+3. Build for production:
+   ```bash
+   npm run build
+   ```
 
 ---
 
-## 🔐 Admin Panel Management
+## 🚀 Deployment to Raxo.online
 
-1. `Ctrl + Shift + A` dabayein ya browser me URL ke aage `#admin` open karein.
-2. Password daalein: **`admin123`**.
-3. **Apps List:** Kisi bhi app ka download link, name, logo ya status edit/delete karein.
-4. **Add New App:** Nayi app ka name, direct download link aur image file upload karein (live instant image preview ke sath).
-5. "Publish App" dabate hi app turant live grid me add ho jayegi!
+- **Vercel / Netlify / Cloudflare Pages:**
+  Simply connect this GitHub repository (`https://github.com/Rajveerkol/raja-1.git`).
+  - **Build Command:** `npm run build`
+  - **Output Directory:** `dist`
+  - Connect your custom domain `Raxo.online` in the dashboard!

@@ -5,6 +5,9 @@ import { AppItem, SiteSettings } from './types';
 const SUPABASE_URL_KEY = 'raxo_supabase_url';
 const SUPABASE_KEY_KEY = 'raxo_supabase_anon_key';
 
+const DEFAULT_SUPABASE_URL = 'https://mpxbnwcospmifvhcteqi.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGJud2Nvc3BtaWZ2aGN0ZXFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MDQwNzAsImV4cCI6MjEwNzk4MDA3MH0.ry7cfxKeatvVN_86V_4TEZcy69sYV5W3WG9-rv5k0LU';
+
 export function getSupabaseCredentials() {
   const envUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -12,8 +15,8 @@ export function getSupabaseCredentials() {
   const storedUrl = localStorage.getItem(SUPABASE_URL_KEY) || '';
   const storedKey = localStorage.getItem(SUPABASE_KEY_KEY) || '';
 
-  const url = (envUrl && envUrl !== 'https://your-project-id.supabase.co') ? envUrl : storedUrl;
-  const key = (envKey && envKey !== 'your-anon-public-key') ? envKey : storedKey;
+  const url = envUrl || storedUrl || DEFAULT_SUPABASE_URL;
+  const key = envKey || storedKey || DEFAULT_SUPABASE_ANON_KEY;
 
   return { url, key };
 }
