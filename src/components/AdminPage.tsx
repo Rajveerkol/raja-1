@@ -56,6 +56,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [description, setDescription] = useState('');
   const [apkFileName, setApkFileName] = useState('');
+  const [originalApkName, setOriginalApkName] = useState('');
   const [buttonText, setButtonText] = useState('Download APK');
   const [isUploadingApk, setIsUploadingApk] = useState(false);
   const apkFileInputRef = useRef<HTMLInputElement>(null);
@@ -134,10 +135,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
   };
 
+  // Clean default APK file name derived from app name
+  const getDefaultApkName = () => {
+    const safe = (name.trim() || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return `${safe || 'app'}.apk`;
+  };
+
+  const handleUseDefaultApkName = () => {
+    setApkFileName(getDefaultApkName());
+  };
+
+  const handleUseOriginalApkName = () => {
+    if (originalApkName) {
+      setApkFileName(originalApkName);
+    }
+  };
+
   // Handle APK File Upload
   const handleApkFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Reset input value so user can re-select file if needed
+    e.target.value = '';
 
     setIsUploadingApk(true);
     setFormError('');
@@ -146,7 +166,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     // Auto-calculate size in MB
     const calculatedSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
     setSize(calculatedSize);
-    setApkFileName(file.name);
+    setOriginalApkName(file.name);
+
+    // Set default clean download filename
+    const defaultName = getDefaultApkName();
+    setApkFileName(defaultName);
 
     // Try Supabase Storage upload if available
     if (isSupabaseConfigured()) {
@@ -155,7 +179,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         if (publicUrl) {
           setDownloadUrl(publicUrl);
           setIsUploadingApk(false);
-          setFormSuccess(`APK "${file.name}" uploaded to cloud storage successfully!`);
+          setFormSuccess(`APK file "${file.name}" uploaded to cloud storage successfully! You can change the download filename below or keep default.`);
           return;
         }
       } catch (err) {
@@ -167,7 +191,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     const objectUrl = URL.createObjectURL(file);
     setDownloadUrl(objectUrl);
     setIsUploadingApk(false);
-    setFormSuccess(`APK "${file.name}" (${calculatedSize}) attached and ready for download/install!`);
+    setFormSuccess(`APK file "${file.name}" (${calculatedSize}) attached! You can change the download filename below or keep default.`);
   };
 
   // Start Editing App
@@ -176,6 +200,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setName(app.name);
     setDownloadUrl(app.downloadUrl);
     setApkFileName(app.apkFileName || '');
+    setOriginalApkName(app.apkFileName || '');
     setButtonText(app.buttonText || 'Download APK');
     setLogo(app.logo);
     setLogoPreview(app.logo);
@@ -198,6 +223,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setName('');
     setDownloadUrl('');
     setApkFileName('');
+    setOriginalApkName('');
     setButtonText('Download APK');
     setLogo('');
     setLogoPreview('');
@@ -909,15 +935,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   </div>
 
                   {/* APK Upload & Download Configuration */}
-                  <div className="form-col-full" style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div className="form-col-full" style={{ background: '#f8fafc', padding: '18px', borderRadius: '18px', border: '1.5px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
-                        <label className="field-label" style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label className="field-label" style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Package size={18} color="#4f46e5" />
-                          <span>APK File Upload &amp; Download Setup *</span>
+                          <span>APK Package &amp; Download Setup *</span>
                         </label>
                         <span className="field-help" style={{ margin: '3px 0 0 0' }}>
-                          Upload an .apk file directly from your device, or paste an external download link.
+                          Upload an .apk file directly, set custom download filename or use default, or paste an external link.
                         </span>
                       </div>
 
@@ -938,29 +964,86 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                         disabled={isUploadingApk}
                       >
                         <Upload size={15} />
-                        <span>{isUploadingApk ? 'Attaching APK...' : 'Upload .APK File'}</span>
+                        <span>{isUploadingApk ? 'Attaching APK...' : (apkFileName || downloadUrl ? 'Replace APK File' : 'Upload .APK File')}</span>
                       </button>
                     </div>
 
-                    {apkFileName && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#065f46', fontWeight: 600 }}>
-                          <CheckCircle2 size={16} color="#059669" />
-                          <span>Attached APK: <strong>{apkFileName}</strong> ({size})</span>
+                    {/* Attached APK Banner & Custom File Name Controls */}
+                    {(apkFileName || originalApkName || downloadUrl.startsWith('blob:') || downloadUrl.includes('.apk')) && (
+                      <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '14px', marginBottom: '16px', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#065f46', fontWeight: 700 }}>
+                            <CheckCircle2 size={18} color="#059669" />
+                            <span>
+                              Attached APK: {originalApkName || apkFileName || 'Package ready'} {size ? `(${size})` : ''}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              type="button" 
+                              onClick={() => apkFileInputRef.current?.click()}
+                              className="btn-secondary-light"
+                              style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                              title="Select a different APK file to replace"
+                            >
+                              <RefreshCw size={13} /> Replace APK
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => { setApkFileName(''); setOriginalApkName(''); setDownloadUrl(''); }}
+                              style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', padding: '4px 10px', borderRadius: '8px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
+                              title="Remove attached APK"
+                            >
+                              <Trash2 size={13} /> Remove
+                            </button>
+                          </div>
                         </div>
-                        <button 
-                          type="button" 
-                          onClick={() => { setApkFileName(''); setDownloadUrl(''); }}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
-                        >
-                          Remove
-                        </button>
+
+                        {/* File Name Customizer */}
+                        <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+                            <label className="field-label" style={{ fontSize: '0.82rem', margin: 0, fontWeight: 700, color: '#334155' }}>
+                              Download File Name (What visitors see when downloading &amp; installing)
+                            </label>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button 
+                                type="button" 
+                                onClick={handleUseDefaultApkName}
+                                style={{ background: '#e0e7ff', border: 'none', color: '#4338ca', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                                title="Reset to clean default name based on app title"
+                              >
+                                Use Default ({getDefaultApkName()})
+                              </button>
+                              {originalApkName && originalApkName !== getDefaultApkName() && (
+                                <button 
+                                  type="button" 
+                                  onClick={handleUseOriginalApkName}
+                                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                                  title="Use original file name as uploaded"
+                                >
+                                  Use Uploaded Name
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <input 
+                            type="text" 
+                            className="field-input" 
+                            placeholder={getDefaultApkName()}
+                            value={apkFileName}
+                            onChange={e => setApkFileName(e.target.value)}
+                            style={{ fontFamily: 'monospace', fontWeight: 600 }}
+                          />
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                            Keep the clean default or edit custom filename. Android will prompt user to install with this file name.
+                          </span>
+                        </div>
                       </div>
                     )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                       <div>
-                        <label className="field-label" style={{ fontSize: '0.82rem' }}>Download URL / APK Link *</label>
+                        <label className="field-label" style={{ fontSize: '0.82rem' }}>Download URL / Cloud Link *</label>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <input 
                             type="text" 
