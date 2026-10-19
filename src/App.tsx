@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, X, CloudDownload, Star, CheckCircle, ShieldCheck, 
-  Rocket, Lock, Sparkles, AlertCircle, Database 
+  Rocket, Lock, Sparkles, AlertCircle 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { AppItem, SiteSettings } from './types';
@@ -13,18 +13,20 @@ import {
   isSupabaseConfigured, fetchSupabaseApps, 
   fetchSupabaseSettings, incrementSupabaseDownloads 
 } from './supabaseClient';
-import { AdminModal } from './components/AdminModal';
+import { AdminPage } from './components/AdminPage';
 import './App.css';
 
 export function App() {
   const [apps, setAppsState] = useState<AppItem[]>([]);
   const [settings, setSettingsState] = useState<SiteSettings>(loadStoredSettings());
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [secretClicks, setSecretClicks] = useState(0);
-  const [supabaseConnected, setSupabaseConnected] = useState(false);
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() => {
+    const p = window.location.pathname.toLowerCase();
+    const h = window.location.hash.toLowerCase();
+    return p === '/admin' || p.startsWith('/admin/') || h === '#admin';
+  });
 
+  const [secretClicks, setSecretClicks] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize data (try Supabase first if configured, otherwise fallback to local)
@@ -35,7 +37,6 @@ export function App() {
         if (remoteApps && remoteApps.length > 0) {
           setAppsState(remoteApps);
           saveStoredApps(remoteApps);
-          setSupabaseConnected(true);
         } else {
           setAppsState(loadStoredApps());
         }
@@ -64,65 +65,14 @@ export function App() {
     saveStoredSettings(newSettings);
   };
 
-  // Dynamic document title update
-  useEffect(() => {
-    document.title = `${settings.siteName} - ${settings.siteTagline}`;
-  }, [settings]);
-
-  // Keyboard shortcut listener:
-  // '/' focuses search
-  // 'Ctrl + Shift + A' opens admin panel
-  // 'Escape' clears search / closes modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
-        e.preventDefault();
-        if (isAdminOpen) closeAdmin();
-        else openAdmin();
-      } else if (e.key === '/' && document.activeElement !== searchInputRef.current && !isAdminOpen) {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      } else if (e.key === 'Escape') {
-        if (isAdminOpen) {
-          closeAdmin();
-        } else if (searchQuery) {
-          setSearchQuery('');
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAdminOpen, searchQuery]);
-
-  const openAdmin = () => {
-    setIsAdminOpen(true);
-    if (window.location.pathname.toLowerCase() !== '/admin') {
-      window.history.pushState({}, '', '/admin');
-    }
-  };
-
-  const closeAdmin = () => {
-    setIsAdminOpen(false);
-    if (window.location.pathname.toLowerCase().startsWith('/admin')) {
-      window.history.pushState({}, '', '/');
-    }
-    if (window.location.hash.toLowerCase() === '#admin') {
-      window.history.pushState({}, '', window.location.pathname);
-    }
-  };
-
-  // Check URL pathname (/admin) or hash (#admin)
+  // Route listener: listen to popstate and hashchange
   useEffect(() => {
     const checkRoute = () => {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path === '/admin' || path === '/admin/' || hash === '#admin') {
-        setIsAdminOpen(true);
-      }
+      const p = window.location.pathname.toLowerCase();
+      const h = window.location.hash.toLowerCase();
+      const isAdmin = p === '/admin' || p.startsWith('/admin/') || h === '#admin';
+      setIsAdminRoute(isAdmin);
     };
-
-    checkRoute();
 
     window.addEventListener('popstate', checkRoute);
     window.addEventListener('hashchange', checkRoute);
@@ -131,6 +81,51 @@ export function App() {
       window.removeEventListener('hashchange', checkRoute);
     };
   }, []);
+
+  // Dynamic document title update
+  useEffect(() => {
+    if (isAdminRoute) {
+      document.title = `Admin Dashboard - ${settings.siteName}`;
+    } else {
+      document.title = `${settings.siteName} - ${settings.siteTagline}`;
+    }
+  }, [settings, isAdminRoute]);
+
+  // Navigate helpers
+  const navigateToAdmin = () => {
+    setIsAdminRoute(true);
+    if (window.location.pathname.toLowerCase() !== '/admin') {
+      window.history.pushState({}, '', '/admin');
+    }
+  };
+
+  const navigateToHome = () => {
+    setIsAdminRoute(false);
+    if (window.location.pathname.toLowerCase().startsWith('/admin') || window.location.hash === '#admin') {
+      window.history.pushState({}, '', '/');
+    }
+  };
+
+  // Keyboard shortcut listener:
+  // '/' focuses search
+  // 'Ctrl + Shift + A' toggles admin page
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        if (isAdminRoute) navigateToHome();
+        else navigateToAdmin();
+      } else if (e.key === '/' && document.activeElement !== searchInputRef.current && !isAdminRoute) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === 'Escape') {
+        if (searchQuery) setSearchQuery('');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAdminRoute, searchQuery]);
 
   // Filter apps (only active apps on public view)
   const query = searchQuery.trim().toLowerCase();
@@ -148,7 +143,6 @@ export function App() {
 
   // Handle Download Click
   const handleDownloadClick = (e: React.MouseEvent, app: AppItem) => {
-    // Trigger celebratory micro-confetti burst
     try {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const x = (rect.left + rect.width / 2) / window.innerWidth;
@@ -162,43 +156,56 @@ export function App() {
         disableForReducedMotion: true
       });
     } catch (err) {
-      // Confetti fallback
+      // fallback
     }
 
-    // Increment downloads count in local state and storage
     incrementDownloadCount(app.id);
     setAppsState(prev => 
       prev.map(a => a.id === app.id ? { ...a, downloads: (a.downloads || 0) + 1 } : a)
     );
 
-    // Increment in Supabase if configured
     if (isSupabaseConfigured()) {
       incrementSupabaseDownloads(app.id);
     }
 
-    // Open target download link in new tab
     if (app.downloadUrl) {
       window.open(app.downloadUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
-  // Secret footer triple click to open admin
+  // Secret footer click to open admin
   const handleSecretFooterClick = () => {
     setSecretClicks(prev => {
       const next = prev + 1;
       if (next >= 3) {
-        openAdmin();
+        navigateToAdmin();
         return 0;
       }
       return next;
     });
   };
 
+  // =========================================================================
+  // IF USER IS ON /admin ROUTE -> RENDER DEDICATED FULL-PAGE ADMIN DASHBOARD
+  // =========================================================================
+  if (isAdminRoute) {
+    return (
+      <AdminPage 
+        apps={apps}
+        setApps={setApps}
+        settings={settings}
+        setSettings={setSettings}
+        onNavigateHome={navigateToHome}
+      />
+    );
+  }
+
+  // =========================================================================
+  // OTHERWISE -> RENDER PUBLIC USER WEBSITE
+  // =========================================================================
   return (
     <div className="app-container">
-      {/* ==================================================================
-          Header (User Page: Admin Box Completely Removed as requested)
-          ================================================================== */}
+      {/* Header (Admin Box Completely Removed for public visitors) */}
       <header className="site-header">
         <div className="header-inner">
           <div 
@@ -214,9 +221,7 @@ export function App() {
         </div>
       </header>
 
-      {/* ==================================================================
-          Hero & Search Bar (Category Pills All/Games/Utilities Removed as requested)
-          ================================================================== */}
+      {/* Hero & Search Bar */}
       <section className="hero-wrapper">
         <div className="search-container">
           <div className="search-glass-box">
@@ -239,8 +244,8 @@ export function App() {
                 <button 
                   type="button" 
                   className="btn-clear-search" 
-                  onClick={openAdmin}
-                  title="Open Admin Panel"
+                  onClick={navigateToAdmin}
+                  title="Open Admin Portal"
                   style={{ color: '#6366f1' }}
                 >
                   <Lock size={16} />
@@ -264,7 +269,7 @@ export function App() {
             </div>
           </div>
 
-          {/* Micro Status Bar */}
+          {/* Status Pill */}
           <div className="status-meta-row">
             <div className="status-pill">
               <span className="pulse-dot"></span>
@@ -274,20 +279,17 @@ export function App() {
         </div>
       </section>
 
-      {/* ==================================================================
-          Main Content: Responsive 3-Column Grid
-          ================================================================== */}
+      {/* Main Apps Grid (3 columns on desktop, 2 on tablet, 1 on mobile) */}
       <main className="main-wrapper">
         <div className="grid-apps">
           {visibleApps.length === 0 ? (
-            /* Empty State */
             <div className="empty-state-card animate-fade-in">
               <div className="empty-icon-box">
                 <Search size={32} />
               </div>
               <h2 className="empty-state-title">No matching apps found</h2>
               <p className="empty-state-desc">
-                We couldn't find any app matching &ldquo;<span style={{ color: '#4f46e5', fontWeight: 600 }}>{searchQuery}</span>&rdquo;. Check for spelling errors or try another search term.
+                We couldn&rsquo;t find any app matching &ldquo;<span style={{ color: '#4f46e5', fontWeight: 600 }}>{searchQuery}</span>&rdquo;. Check for spelling errors or try another search term.
               </p>
               <button 
                 type="button" 
@@ -308,7 +310,6 @@ export function App() {
                     className="card-icon-img"
                     loading="lazy"
                     onError={(e) => {
-                      // Fallback SVG avatar if image fails
                       (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text x='50' y='58' font-size='32' font-weight='bold' fill='%23ffffff' text-anchor='middle'>${encodeURIComponent(app.name.slice(0, 2).toUpperCase())}</text></svg>`;
                     }}
                   />
@@ -350,9 +351,7 @@ export function App() {
         </div>
       </main>
 
-      {/* ==================================================================
-          Footer
-          ================================================================== */}
+      {/* Footer */}
       <footer className="site-footer">
         <div className="footer-content">
           <p className="footer-copy">
@@ -374,20 +373,6 @@ export function App() {
           </div>
         </div>
       </footer>
-
-      {/* ==================================================================
-          Admin Modal (Accessible via /admin, #admin, Ctrl+Shift+A)
-          ================================================================== */}
-      <AdminModal 
-        isOpen={isAdminOpen}
-        onClose={closeAdmin}
-        apps={apps}
-        setApps={setApps}
-        settings={settings}
-        setSettings={setSettings}
-        isAuthenticated={isAdminAuthenticated}
-        setIsAuthenticated={setIsAdminAuthenticated}
-      />
     </div>
   );
 }
