@@ -101,7 +101,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       setLoginError('');
       setPasswordInput('');
     } else {
-      setLoginError('Invalid password. Default is: admin123');
+      setLoginError('Invalid password. Please try again.');
     }
   };
 
@@ -393,7 +393,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               <input 
                 type={showPassword ? 'text' : 'password'}
                 className="field-input" 
-                placeholder="Enter admin password (admin123)" 
+                placeholder="Enter admin password" 
                 value={passwordInput}
                 onChange={e => setPasswordInput(e.target.value)}
                 style={{ paddingRight: '44px' }}
@@ -423,10 +423,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             <button type="submit" className="btn-primary-purple" style={{ width: '100%', padding: '13px' }}>
               Unlock Admin Dashboard
             </button>
-
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              Default password: <strong>admin123</strong>
-            </div>
           </form>
 
           <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
@@ -1227,7 +1223,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <input 
                     type="password" 
                     className="field-input" 
-                    placeholder="Default: admin123"
+                    placeholder="Enter current password"
                     value={currentPass}
                     onChange={e => setCurrentPass(e.target.value)}
                     required
