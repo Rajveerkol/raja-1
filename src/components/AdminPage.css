@@ -535,6 +535,264 @@
 }
 
 /* ==========================================================================
+   APK Setup & Download Source Selection
+   ========================================================================== */
+.apk-setup-container {
+  background: #f8fafc;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1.5px solid #e2e8f0;
+  transition: border-color 0.2s;
+}
+
+.apk-setup-header {
+  margin-bottom: 16px;
+}
+
+.download-source-tabs {
+  display: flex;
+  gap: 10px;
+  background: #f1f5f9;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 18px;
+}
+
+.download-source-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-source-tab-btn:hover {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.download-source-tab-btn.active {
+  background: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.source-content-panel {
+  animation: fadeInSource 0.2s ease-in-out;
+}
+
+@keyframes fadeInSource {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Empty State / Dropzone */
+.apk-dropzone {
+  border: 2px dashed #cbd5e1;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.apk-dropzone:hover {
+  border-color: #6366f1;
+  background: #fafafa;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.08);
+}
+
+.dropzone-icon-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.dropzone-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.dropzone-subtitle {
+  font-size: 0.84rem;
+  color: #64748b;
+  max-width: 440px;
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+
+.dropzone-btn {
+  padding: 10px 22px !important;
+  font-size: 0.88rem !important;
+}
+
+/* Attached APK Card */
+.attached-apk-card {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.attached-apk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.attached-apk-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attached-apk-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.attached-apk-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.attached-apk-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.apk-badge-size {
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.attached-apk-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.apk-action-btn {
+  padding: 6px 12px !important;
+  font-size: 0.82rem !important;
+}
+
+.apk-action-btn-remove {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.apk-action-btn-remove:hover {
+  background: #fecaca;
+}
+
+/* APK Filename Box */
+.apk-filename-box {
+  background: #f8fafc;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.apk-filename-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.btn-pill-choice {
+  background: #e0e7ff;
+  border: none;
+  color: #4338ca;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pill-choice:hover {
+  background: #c7d2fe;
+}
+
+.btn-pill-choice.neutral {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.btn-pill-choice.neutral:hover {
+  background: #e2e8f0;
+}
+
+/* External Link Card */
+.external-link-card {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ==========================================================================
    Responsive Breakpoints
    ========================================================================== */
 @media (max-width: 960px) {

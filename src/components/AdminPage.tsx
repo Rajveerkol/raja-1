@@ -45,6 +45,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Form State for Add / Edit
   const [editingAppId, setEditingAppId] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [downloadSource, setDownloadSource] = useState<'upload' | 'link'>('upload');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [logo, setLogo] = useState('');
   const [logoPreview, setLogoPreview] = useState('');
@@ -211,6 +212,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setSortOrder(app.sortOrder);
     setStatus(app.status);
     setDescription(app.description || '');
+
+    // Detect if current downloadUrl is an uploaded APK file or an external URL link
+    const isUploadedFile = 
+      app.downloadUrl.startsWith('blob:') || 
+      app.downloadUrl.startsWith('data:') ||
+      app.downloadUrl.includes('/storage/v1/object/public/apks/') ||
+      app.downloadUrl.includes('/uploads/') ||
+      (!app.downloadUrl.startsWith('http://') && !app.downloadUrl.startsWith('https://'));
+
+    setDownloadSource(isUploadedFile ? 'upload' : 'link');
+
     setActiveTab('add');
     setFormSuccess('');
     setFormError('');
@@ -221,6 +233,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const resetAppForm = () => {
     setEditingAppId(null);
     setName('');
+    setDownloadSource('upload');
     setDownloadUrl('');
     setApkFileName('');
     setOriginalApkName('');
@@ -245,10 +258,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       setFormError('App name is required.');
       return;
     }
-    if (!downloadUrl.trim()) {
-      setFormError('Download link or APK file is required.');
-      return;
+
+    if (downloadSource === 'upload') {
+      if (!downloadUrl.trim() && !apkFileName.trim()) {
+        setFormError('Please attach an .apk file before saving, or switch to "Provide Download Link".');
+        return;
+      }
+    } else {
+      if (!downloadUrl.trim()) {
+        setFormError('Please enter a valid external download link or switch to "Upload Full APK".');
+        return;
+      }
     }
+
+    const resolvedApkFileName = apkFileName.trim() || getDefaultApkName();
 
     if (editingAppId) {
       // Update existing
@@ -256,7 +279,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         id: editingAppId,
         name: name.trim(),
         downloadUrl: downloadUrl.trim(),
-        apkFileName: apkFileName.trim() || undefined,
+        apkFileName: resolvedApkFileName,
         buttonText: buttonText.trim() || 'Download APK',
         logo: logo.trim() || '/uploads/logos/nexo.svg',
         rating: Number(rating) || 4.9,
@@ -287,7 +310,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         id: 'app-' + Date.now(),
         name: name.trim(),
         downloadUrl: downloadUrl.trim(),
-        apkFileName: apkFileName.trim() || undefined,
+        apkFileName: resolvedApkFileName,
         buttonText: buttonText.trim() || 'Download APK',
         logo: logo.trim() || '/uploads/logos/nexo.svg',
         rating: Number(rating) || 4.9,
@@ -934,148 +957,247 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     />
                   </div>
 
-                  {/* APK Upload & Download Configuration */}
-                  <div className="form-col-full" style={{ background: '#f8fafc', padding: '18px', borderRadius: '18px', border: '1.5px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  {/* APK Package & Download Setup (Dual-Option Toggle) */}
+                  <div className="form-col-full apk-setup-container">
+                    <div className="apk-setup-header">
                       <div>
-                        <label className="field-label" style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Package size={18} color="#4f46e5" />
-                          <span>APK Package &amp; Download Setup *</span>
+                        <label className="field-label" style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Package size={20} color="#4f46e5" />
+                          <span>Download Source &amp; Configuration *</span>
                         </label>
-                        <span className="field-help" style={{ margin: '3px 0 0 0' }}>
-                          Upload an .apk file directly, set custom download filename or use default, or paste an external link.
+                        <span className="field-help" style={{ margin: '4px 0 0 0', display: 'block' }}>
+                          Choose whether to upload an .APK file directly from your device or provide an external download link.
                         </span>
                       </div>
+                    </div>
 
-                      {/* Hidden APK File Input */}
-                      <input 
-                        type="file" 
-                        ref={apkFileInputRef} 
-                        accept=".apk,application/vnd.android.package-archive" 
-                        onChange={handleApkFileChange} 
-                        style={{ display: 'none' }} 
-                      />
-
-                      <button 
-                        type="button" 
-                        className="btn-primary-purple" 
-                        style={{ padding: '8px 16px', fontSize: '0.84rem' }}
-                        onClick={() => apkFileInputRef.current?.click()}
-                        disabled={isUploadingApk}
+                    {/* Mode Toggle Switch */}
+                    <div className="download-source-tabs">
+                      <button
+                        type="button"
+                        className={`download-source-tab-btn ${downloadSource === 'upload' ? 'active' : ''}`}
+                        onClick={() => {
+                          setDownloadSource('upload');
+                          setFormError('');
+                        }}
                       >
-                        <Upload size={15} />
-                        <span>{isUploadingApk ? 'Attaching APK...' : (apkFileName || downloadUrl ? 'Replace APK File' : 'Upload .APK File')}</span>
+                        <Upload size={17} />
+                        <span>Upload Full APK File</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`download-source-tab-btn ${downloadSource === 'link' ? 'active' : ''}`}
+                        onClick={() => {
+                          setDownloadSource('link');
+                          setFormError('');
+                        }}
+                      >
+                        <ExternalLink size={17} />
+                        <span>Provide Download Link</span>
                       </button>
                     </div>
 
-                    {/* Attached APK Banner & Custom File Name Controls */}
-                    {(apkFileName || originalApkName || downloadUrl.startsWith('blob:') || downloadUrl.includes('.apk')) && (
-                      <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '14px', marginBottom: '16px', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: '#065f46', fontWeight: 700 }}>
-                            <CheckCircle2 size={18} color="#059669" />
-                            <span>
-                              Attached APK: {originalApkName || apkFileName || 'Package ready'} {size ? `(${size})` : ''}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
-                              type="button" 
-                              onClick={() => apkFileInputRef.current?.click()}
-                              className="btn-secondary-light"
-                              style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                              title="Select a different APK file to replace"
-                            >
-                              <RefreshCw size={13} /> Replace APK
-                            </button>
-                            <button 
-                              type="button" 
-                              onClick={() => { setApkFileName(''); setOriginalApkName(''); setDownloadUrl(''); }}
-                              style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', padding: '4px 10px', borderRadius: '8px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
-                              title="Remove attached APK"
-                            >
-                              <Trash2 size={13} /> Remove
-                            </button>
-                          </div>
-                        </div>
+                    {/* Hidden APK File Input */}
+                    <input 
+                      type="file" 
+                      ref={apkFileInputRef} 
+                      accept=".apk,application/vnd.android.package-archive" 
+                      onChange={handleApkFileChange} 
+                      style={{ display: 'none' }} 
+                    />
 
-                        {/* File Name Customizer */}
-                        <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
-                            <label className="field-label" style={{ fontSize: '0.82rem', margin: 0, fontWeight: 700, color: '#334155' }}>
-                              Download File Name (What visitors see when downloading &amp; installing)
-                            </label>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button 
-                                type="button" 
-                                onClick={handleUseDefaultApkName}
-                                style={{ background: '#e0e7ff', border: 'none', color: '#4338ca', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-                                title="Reset to clean default name based on app title"
-                              >
-                                Use Default ({getDefaultApkName()})
-                              </button>
-                              {originalApkName && originalApkName !== getDefaultApkName() && (
+                    {/* OPTION 1: Upload Full APK File */}
+                    {downloadSource === 'upload' && (
+                      <div className="source-content-panel">
+                        {!(apkFileName || originalApkName || downloadUrl.startsWith('blob:') || downloadUrl.includes('.apk') || downloadUrl.includes('/storage/')) ? (
+                          /* Empty State / Drag & Drop Upload Dropzone */
+                          <div 
+                            className="apk-dropzone"
+                            onClick={() => apkFileInputRef.current?.click()}
+                          >
+                            <div className="dropzone-icon-circle">
+                              <Upload size={28} />
+                            </div>
+                            <div className="dropzone-title">
+                              {isUploadingApk ? 'Attaching & Uploading APK...' : 'Click to Upload .APK File'}
+                            </div>
+                            <div className="dropzone-subtitle">
+                              Supports Android package files (.apk). File size and download package name will be auto-configured.
+                            </div>
+                            <button 
+                              type="button" 
+                              className="btn-primary-purple dropzone-btn"
+                              disabled={isUploadingApk}
+                            >
+                              <Upload size={15} />
+                              <span>{isUploadingApk ? 'Uploading...' : 'Select APK from Computer'}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          /* Attached APK Box & Filename Customizer */
+                          <div className="attached-apk-card">
+                            <div className="attached-apk-header">
+                              <div className="attached-apk-info">
+                                <div className="attached-apk-icon">
+                                  <CheckCircle2 size={22} color="#059669" />
+                                </div>
+                                <div>
+                                  <div className="attached-apk-name">
+                                    {originalApkName || apkFileName || 'Android APK Package'}
+                                  </div>
+                                  <div className="attached-apk-meta">
+                                    <span className="apk-badge-size">{size || 'Ready'}</span>
+                                    <span>• Package Ready for Direct Installation</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="attached-apk-actions">
                                 <button 
                                   type="button" 
-                                  onClick={handleUseOriginalApkName}
-                                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-                                  title="Use original file name as uploaded"
+                                  onClick={() => apkFileInputRef.current?.click()}
+                                  className="btn-secondary-light apk-action-btn"
+                                  title="Replace with another APK file"
                                 >
-                                  Use Uploaded Name
+                                  <RefreshCw size={13} /> Replace APK
                                 </button>
-                              )}
+                                <button 
+                                  type="button" 
+                                  onClick={() => { 
+                                    setApkFileName(''); 
+                                    setOriginalApkName(''); 
+                                    setDownloadUrl(''); 
+                                  }}
+                                  className="apk-action-btn-remove"
+                                  title="Remove attached APK"
+                                >
+                                  <Trash2 size={13} /> Remove
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Download Filename Customizer */}
+                            <div className="apk-filename-box">
+                              <div className="apk-filename-top">
+                                <label className="field-label" style={{ fontSize: '0.84rem', margin: 0, fontWeight: 700, color: '#1e293b' }}>
+                                  Download File Name (What user&apos;s Android phone saves &amp; installs as)
+                                </label>
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                  <button 
+                                    type="button" 
+                                    onClick={handleUseDefaultApkName}
+                                    className="btn-pill-choice"
+                                    title="Reset to clean default name based on app title"
+                                  >
+                                    Use Default ({getDefaultApkName()})
+                                  </button>
+                                  {originalApkName && originalApkName !== getDefaultApkName() && (
+                                    <button 
+                                      type="button" 
+                                      onClick={handleUseOriginalApkName}
+                                      className="btn-pill-choice neutral"
+                                      title="Use original file name as uploaded"
+                                    >
+                                      Use Uploaded Name
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <input 
+                                type="text" 
+                                className="field-input" 
+                                placeholder={getDefaultApkName()}
+                                value={apkFileName}
+                                onChange={e => setApkFileName(e.target.value)}
+                                style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.92rem' }}
+                              />
+                              <div className="field-help" style={{ marginTop: '5px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                                <span>Android will prompt user to install with this file name. Keep default or customize.</span>
+                                {downloadUrl && (
+                                  <a 
+                                    href={downloadUrl} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    style={{ color: '#4f46e5', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                                  >
+                                    <ExternalLink size={13} /> Test Download
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <input 
-                            type="text" 
-                            className="field-input" 
-                            placeholder={getDefaultApkName()}
-                            value={apkFileName}
-                            onChange={e => setApkFileName(e.target.value)}
-                            style={{ fontFamily: 'monospace', fontWeight: 600 }}
-                          />
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
-                            Keep the clean default or edit custom filename. Android will prompt user to install with this file name.
+                        )}
+                      </div>
+                    )}
+
+                    {/* OPTION 2: External Download Link */}
+                    {downloadSource === 'link' && (
+                      <div className="source-content-panel">
+                        <div className="external-link-card">
+                          <label className="field-label" style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                            External Download Link / URL *
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input 
+                              type="url" 
+                              className="field-input" 
+                              placeholder="https://drive.google.com/..., Mediafire, or direct APK link"
+                              value={downloadUrl}
+                              onChange={e => setDownloadUrl(e.target.value)}
+                              required={downloadSource === 'link'}
+                              style={{ flex: 1 }}
+                            />
+                            {downloadUrl && (
+                              <a 
+                                href={downloadUrl} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="btn-secondary-light"
+                                style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                              >
+                                <ExternalLink size={15} /> Test Link
+                              </a>
+                            )}
+                          </div>
+                          <span className="field-help" style={{ display: 'block', marginTop: '6px' }}>
+                            Visitors clicking &quot;Download APK&quot; will be routed directly to this link.
                           </span>
                         </div>
                       </div>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                      <div>
-                        <label className="field-label" style={{ fontSize: '0.82rem' }}>Download URL / Cloud Link *</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* Download Button Text & Optional Details (Applies to both) */}
+                    <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+                        <div>
+                          <label className="field-label" style={{ fontSize: '0.84rem' }}>
+                            Download Button Text
+                          </label>
                           <input 
                             type="text" 
                             className="field-input" 
-                            placeholder="https://example.com/app.apk or uploaded file"
-                            value={downloadUrl}
-                            onChange={e => setDownloadUrl(e.target.value)}
-                            required
+                            placeholder="Download APK" 
+                            value={buttonText}
+                            onChange={e => setButtonText(e.target.value)}
                           />
-                          {downloadUrl && (
-                            <a 
-                              href={downloadUrl} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="btn-secondary-light"
-                              style={{ whiteSpace: 'nowrap' }}
-                            >
-                              <ExternalLink size={15} /> Test
-                            </a>
-                          )}
+                          <span className="field-help">Default is &quot;Download APK&quot;. You can also set &quot;Install Now&quot;, &quot;Get App&quot;, etc.</span>
                         </div>
-                      </div>
 
-                      <div>
-                        <label className="field-label" style={{ fontSize: '0.82rem' }}>Button Text</label>
-                        <input 
-                          type="text" 
-                          className="field-input" 
-                          placeholder="Download APK" 
-                          value={buttonText}
-                          onChange={e => setButtonText(e.target.value)}
-                        />
+                        {downloadSource === 'link' && (
+                          <div>
+                            <label className="field-label" style={{ fontSize: '0.84rem' }}>
+                              Package File Name (Optional)
+                            </label>
+                            <input 
+                              type="text" 
+                              className="field-input" 
+                              placeholder={getDefaultApkName()}
+                              value={apkFileName}
+                              onChange={e => setApkFileName(e.target.value)}
+                              style={{ fontFamily: 'monospace' }}
+                            />
+                            <span className="field-help">Optional suggested filename when downloaded.</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
