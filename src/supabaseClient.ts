@@ -9,14 +9,22 @@ const DEFAULT_SUPABASE_URL = 'https://mpxbnwcospmifvhcteqi.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGJud2Nvc3BtaWZ2aGN0ZXFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MDQwNzAsImV4cCI6MjEwNzk4MDA3MH0.ry7cfxKeatvVN_86V_4TEZcy69sYV5W3WG9-rv5k0LU';
 
 export function getSupabaseCredentials() {
-  const envUrl = import.meta.env.VITE_SUPABASE_URL || '';
-  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const envUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+  const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
   
-  const storedUrl = localStorage.getItem(SUPABASE_URL_KEY) || '';
-  const storedKey = localStorage.getItem(SUPABASE_KEY_KEY) || '';
+  let storedUrl = (localStorage.getItem(SUPABASE_URL_KEY) || '').trim();
+  let storedKey = (localStorage.getItem(SUPABASE_KEY_KEY) || '').trim();
 
-  const url = envUrl || storedUrl || DEFAULT_SUPABASE_URL;
-  const key = envKey || storedKey || DEFAULT_SUPABASE_ANON_KEY;
+  // If stored URL is empty or invalid, fallback to the pre-configured project credentials
+  if (!storedUrl || !storedUrl.startsWith('http')) {
+    storedUrl = DEFAULT_SUPABASE_URL;
+  }
+  if (!storedKey || storedKey.length < 20) {
+    storedKey = DEFAULT_SUPABASE_ANON_KEY;
+  }
+
+  const url = envUrl || storedUrl;
+  const key = envKey || storedKey;
 
   return { url, key };
 }
@@ -24,6 +32,7 @@ export function getSupabaseCredentials() {
 export function saveSupabaseCredentials(url: string, key: string) {
   localStorage.setItem(SUPABASE_URL_KEY, url.trim());
   localStorage.setItem(SUPABASE_KEY_KEY, key.trim());
+  supabaseInstance = null; // Clear cached instance on credentials update
 }
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -50,6 +59,23 @@ export function isSupabaseConfigured(): boolean {
 
 // Convert DB snake_case row to AppItem camelCase
 function rowToAppItem(row: any): AppItem {
+  let description = row.description || '';
+  let apkFileName: string | undefined = undefined;
+  let buttonText: string | undefined = undefined;
+
+  // Extract metadata safely from description if present
+  const metaMatch = description.match(/<!--METADATA:({.*?})-->/s);
+  if (metaMatch) {
+    try {
+      const parsed = JSON.parse(metaMatch[1]);
+      apkFileName = parsed.apkFileName;
+      buttonText = parsed.buttonText;
+      description = description.replace(metaMatch[0], '').trim();
+    } catch (e) {
+      // ignore
+    }
+  }
+
   return {
     id: String(row.id),
     name: row.name,
@@ -62,14 +88,24 @@ function rowToAppItem(row: any): AppItem {
     downloads: Number(row.downloads) || 0,
     status: (row.status === 'inactive' ? 'inactive' : 'active'),
     sortOrder: Number(row.sort_order) || 0,
-    description: row.description || '',
-    apkFileName: row.apk_file_name || undefined,
-    buttonText: row.button_text || undefined
+    description,
+    apkFileName: apkFileName || row.apk_file_name || undefined,
+    buttonText: buttonText || row.button_text || undefined
   };
 }
 
-// Convert AppItem camelCase to DB snake_case
+// Convert AppItem camelCase to DB snake_case matching remote Supabase columns
 function appItemToRow(app: AppItem): any {
+  let desc = app.description || '';
+  if (app.apkFileName || app.buttonText) {
+    const meta = JSON.stringify({
+      apkFileName: app.apkFileName,
+      buttonText: app.buttonText
+    });
+    desc = desc.replace(/<!--METADATA:[^>]+-->/g, '').trim();
+    desc = `<!--METADATA:${meta}-->${desc ? '\n' + desc : ''}`;
+  }
+
   return {
     id: app.id,
     name: app.name,
@@ -82,9 +118,7 @@ function appItemToRow(app: AppItem): any {
     downloads: app.downloads,
     status: app.status,
     sort_order: app.sortOrder,
-    description: app.description || '',
-    apk_file_name: app.apkFileName || null,
-    button_text: app.buttonText || null
+    description: desc
   };
 }
 

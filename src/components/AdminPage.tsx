@@ -299,7 +299,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         await upsertSupabaseApp(updatedItem);
       }
 
-      setFormSuccess(`App "${name}" updated successfully!`);
+      setFormSuccess(`App "${name}" updated & saved to Database successfully!`);
       setTimeout(() => {
         setActiveTab('apps');
         resetAppForm();
@@ -329,7 +329,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         await upsertSupabaseApp(newApp);
       }
 
-      setFormSuccess(`App "${name}" published successfully!`);
+      setFormSuccess(`App "${name}" published & saved to Database successfully!`);
       setTimeout(() => {
         setActiveTab('apps');
         resetAppForm();

@@ -11,7 +11,8 @@ import {
 } from './data';
 import { 
   isSupabaseConfigured, fetchSupabaseApps, 
-  fetchSupabaseSettings, incrementSupabaseDownloads 
+  fetchSupabaseSettings, incrementSupabaseDownloads,
+  upsertSupabaseApp
 } from './supabaseClient';
 import { AdminPage } from './components/AdminPage';
 import { LegalModals, LegalModalType } from './components/LegalModals';
@@ -44,22 +45,32 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  // Initialize data (try Supabase first if configured, otherwise fallback to local)
+  // Initialize data (load directly from Supabase DB, fallback to local only if offline)
   useEffect(() => {
     async function initData() {
       if (isSupabaseConfigured()) {
-        const remoteApps = await fetchSupabaseApps();
-        if (remoteApps && remoteApps.length > 0) {
-          setAppsState(remoteApps);
-          saveStoredApps(remoteApps);
-        } else {
-          setAppsState(loadStoredApps());
-        }
+        try {
+          const remoteApps = await fetchSupabaseApps();
+          if (remoteApps && remoteApps.length > 0) {
+            setAppsState(remoteApps);
+            saveStoredApps(remoteApps);
+          } else {
+            // If remote database is empty, seed initial apps directly to Supabase
+            const starterApps = loadStoredApps();
+            setAppsState(starterApps);
+            for (const item of starterApps) {
+              await upsertSupabaseApp(item);
+            }
+          }
 
-        const remoteSettings = await fetchSupabaseSettings();
-        if (remoteSettings) {
-          setSettingsState(remoteSettings);
-          saveStoredSettings(remoteSettings);
+          const remoteSettings = await fetchSupabaseSettings();
+          if (remoteSettings) {
+            setSettingsState(remoteSettings);
+            saveStoredSettings(remoteSettings);
+          }
+        } catch (err) {
+          console.error('Supabase connection error:', err);
+          setAppsState(loadStoredApps());
         }
       } else {
         setAppsState(loadStoredApps());
