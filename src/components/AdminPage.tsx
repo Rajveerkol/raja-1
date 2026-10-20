@@ -1243,69 +1243,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     />
                   </div>
 
-                  {/* Rating */}
-                  <div>
-                    <label className="field-label">Rating (1.0 - 5.0)</label>
-                    <input 
-                      type="number" 
-                      step="0.1" 
-                      min="1" 
-                      max="5"
-                      className="field-input" 
-                      value={rating}
-                      onChange={e => setRating(parseFloat(e.target.value) || 4.9)}
-                    />
-                  </div>
-
-                  {/* Badge */}
-                  <div>
-                    <label className="field-label">Badge Text</label>
-                    <input 
-                      type="text" 
-                      className="field-input" 
-                      value={badge}
-                      onChange={e => setBadge(e.target.value)}
-                      placeholder="Verified, Hot, Official"
-                    />
-                  </div>
-
-                  {/* Category */}
-                  <div>
-                    <label className="field-label">Category</label>
-                    <input 
-                      type="text" 
-                      className="field-input" 
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
-                      placeholder="Games, Utilities"
-                    />
-                  </div>
-
-                  {/* File Size */}
-                  <div>
-                    <label className="field-label">File Size</label>
-                    <input 
-                      type="text" 
-                      className="field-input" 
-                      value={size}
-                      onChange={e => setSize(e.target.value)}
-                      placeholder="52 MB"
-                    />
-                  </div>
-
-                  {/* Display Order */}
-                  <div>
-                    <label className="field-label">Display Order</label>
-                    <input 
-                      type="number" 
-                      className="field-input" 
-                      value={sortOrder}
-                      onChange={e => setSortOrder(parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-
                   {/* Status */}
-                  <div>
+                  <div className="form-col-full">
                     <label className="field-label">Visibility Status</label>
                     <select 
                       className="field-select"
