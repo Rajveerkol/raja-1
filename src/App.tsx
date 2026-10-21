@@ -51,16 +51,11 @@ export function App() {
       if (isSupabaseConfigured()) {
         try {
           const remoteApps = await fetchSupabaseApps();
-          if (remoteApps && remoteApps.length > 0) {
+          if (remoteApps !== null) {
             setAppsState(remoteApps);
             saveStoredApps(remoteApps);
           } else {
-            // If remote database is empty, seed initial apps directly to Supabase
-            const starterApps = loadStoredApps();
-            setAppsState(starterApps);
-            for (const item of starterApps) {
-              await upsertSupabaseApp(item);
-            }
+            setAppsState(loadStoredApps());
           }
 
           const remoteSettings = await fetchSupabaseSettings();

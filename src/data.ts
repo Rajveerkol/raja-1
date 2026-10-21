@@ -190,10 +190,10 @@ const LEGACY_PASSWORD_STORAGE_KEY = 'raxo_admin_password';
 
 export function loadStoredApps(): AppItem[] {
   try {
-    const raw = localStorage.getItem(APPS_STORAGE_KEY) || localStorage.getItem(LEGACY_APPS_STORAGE_KEY);
-    if (raw) {
+    const raw = localStorage.getItem(APPS_STORAGE_KEY) ?? localStorage.getItem(LEGACY_APPS_STORAGE_KEY);
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }

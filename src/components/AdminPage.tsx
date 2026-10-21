@@ -361,6 +361,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
   };
 
+  // Clear All Applications
+  const handleClearAllApps = async () => {
+    if (window.confirm('Are you sure you want to delete all listed applications? This will clear them from both the website and database.')) {
+      const appsToDelete = [...apps];
+      setApps([]);
+      if (isSupabaseConfigured()) {
+        for (const app of appsToDelete) {
+          await deleteSupabaseApp(app.id);
+        }
+      }
+    }
+  };
+
   // Reset to Default Starter Apps
   const handleResetApps = async () => {
     if (window.confirm('Reset all apps to original 12 starter apps from screenshot?')) {
@@ -725,6 +738,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     onClick={() => { resetAppForm(); setActiveTab('add'); }}
                   >
                     <Plus size={16} /> Add App
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="btn-secondary-light"
+                    style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                    onClick={handleClearAllApps}
+                    title="Delete all applications from database"
+                  >
+                    <Trash2 size={15} /> Clear All Apps
                   </button>
 
                   <button 
