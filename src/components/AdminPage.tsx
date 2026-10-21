@@ -184,6 +184,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           return;
         } else {
           setIsUploadingApk(false);
+          setDownloadUrl('');
           const isBucketMissing = result.error?.includes('Bucket not found') || result.error?.includes('NoSuchBucket') || result.error?.includes('not found');
           if (isBucketMissing) {
             setFormError('⚠️ Storage bucket "apks" is not created in Supabase yet! Create a public bucket named "apks" in Supabase Dashboard (Storage > New Bucket > "apks" with Public ON), OR switch to "Provide Download Link" to enter your external APK URL.');
@@ -273,8 +274,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
 
     if (downloadSource === 'upload') {
-      if (!downloadUrl.trim() && !apkFileName.trim()) {
-        setFormError('Please attach an .apk file before saving, or switch to "Provide Download Link".');
+      if (!downloadUrl.trim()) {
+        setFormError('APK file has not been uploaded to Cloud Storage yet. Please select an APK file to upload, or switch to "Provide Download Link" to enter a direct download link.');
         return;
       }
     } else {
@@ -1283,8 +1284,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button type="submit" className="btn-primary-purple" style={{ padding: '12px 28px' }}>
-                    {editingAppId ? 'Update Application' : 'Publish Application'}
+                  <button type="submit" className="btn-primary-purple" style={{ padding: '12px 28px' }} disabled={isUploadingApk}>
+                    {isUploadingApk ? 'Uploading APK File...' : (editingAppId ? 'Update Application' : 'Publish Application')}
                   </button>
                   <button 
                     type="button" 
