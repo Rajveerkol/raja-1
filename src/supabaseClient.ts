@@ -122,15 +122,20 @@ function appItemToRow(app: AppItem): any {
   };
 }
 
+export interface UploadApkResult {
+  url: string | null;
+  error?: string;
+}
+
 /**
  * Upload an APK file directly to Supabase storage if available
  */
-export async function uploadSupabaseApk(file: File): Promise<string | null> {
+export async function uploadSupabaseApk(file: File): Promise<UploadApkResult> {
   const client = getSupabaseClient();
-  if (!client) return null;
+  if (!client) return { url: null, error: 'Supabase client is not configured' };
   try {
     const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `apks/${Date.now()}_${cleanName}`;
+    const filePath = `${Date.now()}_${cleanName}`;
     const { error } = await client.storage
       .from('apks')
       .upload(filePath, file, {
@@ -140,15 +145,15 @@ export async function uploadSupabaseApk(file: File): Promise<string | null> {
       });
 
     if (error) {
-      console.warn('Storage upload fallback (bucket may not exist):', error.message);
-      return null;
+      console.warn('Storage upload error:', error.message);
+      return { url: null, error: error.message };
     }
 
     const { data } = client.storage.from('apks').getPublicUrl(filePath);
-    return data.publicUrl;
-  } catch (err) {
+    return { url: data.publicUrl };
+  } catch (err: any) {
     console.error('Error uploading APK to Supabase:', err);
-    return null;
+    return { url: null, error: err?.message || 'Storage upload failed' };
   }
 }
 

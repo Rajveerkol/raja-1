@@ -194,21 +194,29 @@ export function App() {
       incrementSupabaseDownloads(app.id);
     }
 
-    if (app.downloadUrl) {
-      // Direct APK file download & trigger Android package installer
-      const safeName = app.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const defaultFileName = `${safeName || 'app'}.apk`;
-      const fileName = app.apkFileName ? (app.apkFileName.endsWith('.apk') ? app.apkFileName : `${app.apkFileName}.apk`) : defaultFileName;
-
-      const link = document.createElement('a');
-      link.href = app.downloadUrl;
-      link.setAttribute('download', fileName);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if (!app.downloadUrl || !app.downloadUrl.trim() || app.downloadUrl === '#') {
+      alert(`The download link for "${app.name}" is currently being updated.`);
+      return;
     }
+
+    if (app.downloadUrl.startsWith('blob:')) {
+      alert(`The temporary session link for "${app.name}" has expired. Please update it in the Admin Panel with a permanent Cloud Storage or external download link.`);
+      return;
+    }
+
+    // Direct APK file download & trigger Android package installer
+    const safeName = app.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const defaultFileName = `${safeName || 'app'}.apk`;
+    const fileName = app.apkFileName ? (app.apkFileName.endsWith('.apk') ? app.apkFileName : `${app.apkFileName}.apk`) : defaultFileName;
+
+    const link = document.createElement('a');
+    link.href = app.downloadUrl;
+    link.setAttribute('download', fileName);
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Secret footer click to open admin

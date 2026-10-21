@@ -173,26 +173,34 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     const defaultName = getDefaultApkName();
     setApkFileName(defaultName);
 
-    // Try Supabase Storage upload if available
+    // Try Supabase Storage upload
     if (isSupabaseConfigured()) {
       try {
-        const publicUrl = await uploadSupabaseApk(file);
-        if (publicUrl) {
-          setDownloadUrl(publicUrl);
+        const result = await uploadSupabaseApk(file);
+        if (result.url) {
+          setDownloadUrl(result.url);
           setIsUploadingApk(false);
-          setFormSuccess(`APK file "${file.name}" uploaded to cloud storage successfully! You can change the download filename below or keep default.`);
+          setFormSuccess(`APK file "${file.name}" (${calculatedSize}) uploaded to Cloud Storage successfully! Permanent download link ready.`);
+          return;
+        } else {
+          setIsUploadingApk(false);
+          const isBucketMissing = result.error?.includes('Bucket not found') || result.error?.includes('NoSuchBucket') || result.error?.includes('not found');
+          if (isBucketMissing) {
+            setFormError('⚠️ Storage bucket "apks" is not created in Supabase yet! Create a public bucket named "apks" in Supabase Dashboard (Storage > New Bucket > "apks" with Public ON), OR switch to "Provide Download Link" to enter your external APK URL.');
+          } else {
+            setFormError(`⚠️ Cloud upload error: ${result.error || 'Check storage permissions'}. You can switch to "Provide Download Link" to enter an external URL.`);
+          }
           return;
         }
-      } catch (err) {
-        console.warn('Supabase storage fallback', err);
+      } catch (err: any) {
+        setIsUploadingApk(false);
+        setFormError(`Upload failed: ${err.message}. Switch to "Provide Download Link" to enter an external URL.`);
+        return;
       }
+    } else {
+      setIsUploadingApk(false);
+      setFormError('Cloud Database is not configured. Please switch to "Provide Download Link" to enter an external URL.');
     }
-
-    // Direct object URL for local / immediate download & installation
-    const objectUrl = URL.createObjectURL(file);
-    setDownloadUrl(objectUrl);
-    setIsUploadingApk(false);
-    setFormSuccess(`APK file "${file.name}" (${calculatedSize}) attached! You can change the download filename below or keep default.`);
   };
 
   // Start Editing App
@@ -256,6 +264,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     e.preventDefault();
     if (!name.trim()) {
       setFormError('App name is required.');
+      return;
+    }
+
+    if (downloadUrl.startsWith('blob:')) {
+      setFormError('Cannot save a temporary browser blob URL. The APK must be uploaded to Cloud Storage or entered as an external download link (e.g. Google Drive, Mediafire).');
       return;
     }
 
@@ -1358,12 +1371,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
               </form>
 
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px', marginTop: '24px' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.92rem', marginBottom: '6px', color: '#0f172a' }}>
-                  📋 Supabase SQL Schema (`supabase_schema.sql`)
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', marginTop: '24px' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.98rem', marginBottom: '8px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Package size={18} color="#4f46e5" />
+                  <span>Cloud APK Storage Setup (Required for Direct APK Uploads)</span>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.6 }}>
-                  If you haven&rsquo;t initialized the tables in Supabase yet, open your Supabase Dashboard &gt; <strong>SQL Editor</strong>, paste the content of <code>supabase_schema.sql</code>, and click <strong>Run</strong>!
+                <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.6, marginBottom: '12px' }}>
+                  To allow direct <code>.apk</code> uploads from the Admin panel without using external links, create a public bucket named <strong>apks</strong> in your Supabase project:
+                </p>
+                <ol style={{ fontSize: '0.84rem', color: '#334155', lineHeight: 1.7, paddingLeft: '20px', marginBottom: '14px' }}>
+                  <li>Open your <strong>Supabase Dashboard &gt; Storage</strong></li>
+                  <li>Click <strong>New Bucket</strong></li>
+                  <li>Name it <strong>apks</strong></li>
+                  <li>Toggle <strong>Public bucket</strong> to ON, then click <strong>Save</strong></li>
+                </ol>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+                  💡 <em>Alternatively: Open Supabase Dashboard &gt; <strong>SQL Editor</strong>, paste and run <code>supabase_schema.sql</code> to create both tables and the storage bucket automatically!</em>
                 </p>
               </div>
             </div>

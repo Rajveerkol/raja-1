@@ -90,3 +90,33 @@ VALUES
 ('app-11', 'Classic 500', '/uploads/logos/classic500.svg', 'https://example.com/download/classic500', 4.9, 'Verified', 'Games', '68 MB', 13400, 'active', 11),
 ('app-12', 'Monkey games', '/uploads/logos/monkeygames.svg', 'https://example.com/download/monkeygames', 4.9, 'Verified', 'Games', '72 MB', 22100, 'active', 12)
 ON CONFLICT (id) DO NOTHING;
+
+-- 7. Create Storage Bucket for APKs & Set Public Access Policies
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('apks', 'apks', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Drop old policies if existing to avoid duplicate policy errors
+DROP POLICY IF EXISTS "Allow public upload to apks" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public read on apks" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public update on apks" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public delete on apks" ON storage.objects;
+
+-- Allow anyone to upload APK files into the 'apks' bucket
+CREATE POLICY "Allow public upload to apks" 
+ON storage.objects FOR INSERT 
+WITH CHECK (bucket_id = 'apks');
+
+-- Allow anyone to download APK files from the 'apks' bucket
+CREATE POLICY "Allow public read on apks" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'apks');
+
+-- Allow update & delete on 'apks' bucket
+CREATE POLICY "Allow public update on apks" 
+ON storage.objects FOR UPDATE 
+USING (bucket_id = 'apks');
+
+CREATE POLICY "Allow public delete on apks" 
+ON storage.objects FOR DELETE 
+USING (bucket_id = 'apks');
