@@ -217,8 +217,77 @@
 }
 
 /* ==========================================================================
-   Ultra Modern App Card
+   Ultra Modern App Card & Skeleton Loading
    ========================================================================== */
+.card-skeleton {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 14px 18px;
+  min-height: 84px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonPulseWave 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonPulseWave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skeleton-title {
+  height: 18px;
+  width: 68%;
+  border-radius: 6px;
+}
+
+.skeleton-badge {
+  height: 14px;
+  width: 42%;
+  border-radius: 4px;
+}
+
+.skeleton-button {
+  width: 110px;
+  height: 38px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
 .card-app {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
@@ -1213,6 +1282,24 @@
     gap: 12px;
     border-radius: 18px;
     min-height: 80px;
+  }
+
+  .card-skeleton {
+    padding: 13px 14px;
+    gap: 12px;
+    border-radius: 18px;
+    min-height: 80px;
+  }
+
+  .skeleton-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 13px;
+  }
+
+  .skeleton-button {
+    width: 95px;
+    height: 34px;
   }
 
   .card-icon-wrap {

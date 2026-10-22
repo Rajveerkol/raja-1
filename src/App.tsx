@@ -19,7 +19,15 @@ import { LegalModals, LegalModalType } from './components/LegalModals';
 import './App.css';
 
 export function App() {
-  const [apps, setAppsState] = useState<AppItem[]>([]);
+  // Stale-While-Revalidate: Instant render from localStorage cache (0ms delay)
+  const [apps, setAppsState] = useState<AppItem[]>(() => {
+    const cached = loadStoredApps();
+    return Array.isArray(cached) ? cached : [];
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    const cached = loadStoredApps();
+    return !cached || cached.length === 0;
+  });
   const [settings, setSettingsState] = useState<SiteSettings>(loadStoredSettings());
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(() => {
@@ -45,33 +53,52 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  // Initialize data (load directly from Supabase DB, fallback to local only if offline)
+  // Initialize data (fetch Supabase DB in parallel with fast timeout guard)
   useEffect(() => {
+    let isMounted = true;
     async function initData() {
       if (isSupabaseConfigured()) {
         try {
-          const remoteApps = await fetchSupabaseApps();
-          if (remoteApps !== null) {
-            setAppsState(remoteApps);
-            saveStoredApps(remoteApps);
+          const [remoteAppsResult, remoteSettingsResult] = await Promise.allSettled([
+            fetchSupabaseApps(),
+            fetchSupabaseSettings()
+          ]);
+
+          if (!isMounted) return;
+
+          if (remoteAppsResult.status === 'fulfilled' && remoteAppsResult.value !== null) {
+            setAppsState(remoteAppsResult.value);
+            saveStoredApps(remoteAppsResult.value);
           } else {
-            setAppsState(loadStoredApps());
+            const local = loadStoredApps();
+            if (local && local.length > 0) {
+              setAppsState(local);
+            }
           }
 
-          const remoteSettings = await fetchSupabaseSettings();
-          if (remoteSettings) {
-            setSettingsState(remoteSettings);
-            saveStoredSettings(remoteSettings);
+          if (remoteSettingsResult.status === 'fulfilled' && remoteSettingsResult.value) {
+            setSettingsState(remoteSettingsResult.value);
+            saveStoredSettings(remoteSettingsResult.value);
           }
         } catch (err) {
-          console.error('Supabase connection error:', err);
-          setAppsState(loadStoredApps());
+          console.error('Database connection error:', err);
+          if (isMounted) {
+            setAppsState(loadStoredApps());
+          }
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
       } else {
-        setAppsState(loadStoredApps());
+        if (isMounted) {
+          setAppsState(loadStoredApps());
+          setIsLoading(false);
+        }
       }
     }
     initData();
+    return () => { isMounted = false; };
   }, []);
 
   // Sync apps with state and storage
@@ -315,23 +342,54 @@ export function App() {
       {/* Main Apps Grid (3 columns on desktop, 2 on tablet, 1 on mobile) */}
       <main className="main-wrapper">
         <div className="grid-apps">
-          {visibleApps.length === 0 ? (
-            <div className="empty-state-card animate-fade-in">
-              <div className="empty-icon-box">
-                <Search size={32} />
+          {isLoading ? (
+            /* Skeleton Loading State (Ultra Smooth Pulse Shimmer) */
+            Array.from({ length: 6 }).map((_, idx) => (
+              <div key={`skeleton-${idx}`} className="card-skeleton">
+                <div className="skeleton-icon skeleton-shimmer" />
+                <div className="skeleton-info">
+                  <div className="skeleton-title skeleton-shimmer" />
+                  <div className="skeleton-badge skeleton-shimmer" />
+                </div>
+                <div className="skeleton-button skeleton-shimmer" />
               </div>
-              <h2 className="empty-state-title">No matching apps found</h2>
-              <p className="empty-state-desc">
-                We couldn&rsquo;t find any app matching &ldquo;<span style={{ color: '#4f46e5', fontWeight: 600 }}>{searchQuery}</span>&rdquo;. Check for spelling errors or try another search term.
-              </p>
-              <button 
-                type="button" 
-                className="btn-reset-search"
-                onClick={() => setSearchQuery('')}
-              >
-                Clear Search
-              </button>
-            </div>
+            ))
+          ) : visibleApps.length === 0 ? (
+            searchQuery.trim() ? (
+              <div className="empty-state-card animate-fade-in">
+                <div className="empty-icon-box">
+                  <Search size={32} />
+                </div>
+                <h2 className="empty-state-title">No matching apps found</h2>
+                <p className="empty-state-desc">
+                  We couldn&rsquo;t find any app matching &ldquo;<span style={{ color: '#4f46e5', fontWeight: 600 }}>{searchQuery}</span>&rdquo;. Check for spelling errors or try another search term.
+                </p>
+                <button 
+                  type="button" 
+                  className="btn-reset-search"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="empty-state-card animate-fade-in">
+                <div className="empty-icon-box" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+                  <Rocket size={32} />
+                </div>
+                <h2 className="empty-state-title">App Catalog Updating</h2>
+                <p className="empty-state-desc">
+                  Verified applications and games are currently being prepared. Check back shortly!
+                </p>
+                <button 
+                  type="button" 
+                  className="btn-reset-search"
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh Catalog
+                </button>
+              </div>
+            )
           ) : (
             visibleApps.map((app) => (
               <div key={app.id} className="card-app animate-fade-in">

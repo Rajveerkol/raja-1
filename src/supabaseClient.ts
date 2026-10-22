@@ -158,20 +158,27 @@ export async function uploadSupabaseApk(file: File): Promise<UploadApkResult> {
 }
 
 /**
- * Fetch all apps from Supabase
+ * Fetch all apps from Supabase with fast timeout guard
  */
-export async function fetchSupabaseApps(): Promise<AppItem[] | null> {
+export async function fetchSupabaseApps(timeoutMs = 4000): Promise<AppItem[] | null> {
   const client = getSupabaseClient();
   if (!client) return null;
 
   try {
-    const { data, error } = await client
+    const fetchPromise = client
       .from('apps')
       .select('*')
       .order('sort_order', { ascending: true });
 
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: { message: 'Database request timed out' } }), timeoutMs)
+    );
+
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    const { data, error } = result as any;
+
     if (error) {
-      console.warn('Supabase fetch error, fallback to local:', error.message);
+      console.warn('Supabase fetch error / timeout:', error.message);
       return null;
     }
 
@@ -259,18 +266,25 @@ export async function incrementSupabaseDownloads(id: string): Promise<void> {
 }
 
 /**
- * Fetch Settings from Supabase
+ * Fetch Settings from Supabase with fast timeout guard
  */
-export async function fetchSupabaseSettings(): Promise<SiteSettings | null> {
+export async function fetchSupabaseSettings(timeoutMs = 3500): Promise<SiteSettings | null> {
   const client = getSupabaseClient();
   if (!client) return null;
 
   try {
-    const { data, error } = await client
+    const fetchPromise = client
       .from('settings')
       .select('*')
       .eq('id', 1)
       .single();
+
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: { message: 'Settings request timed out' } }), timeoutMs)
+    );
+
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    const { data, error } = result as any;
 
     if (error || !data) return null;
 
