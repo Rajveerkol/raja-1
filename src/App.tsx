@@ -12,7 +12,7 @@ import {
 import { 
   isSupabaseConfigured, fetchSupabaseApps, 
   fetchSupabaseSettings, incrementSupabaseDownloads,
-  upsertSupabaseApp
+  upsertSupabaseApp, buildDownloadUrl
 } from './supabaseClient';
 import { AdminPage } from './components/AdminPage';
 import { LegalModals, LegalModalType } from './components/LegalModals';
@@ -227,18 +227,32 @@ export function App() {
     }
 
     // Direct APK file download & trigger Android package installer
-    const safeName = app.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const defaultFileName = `${safeName || 'app'}.apk`;
-    const fileName = app.apkFileName ? (app.apkFileName.endsWith('.apk') ? app.apkFileName : `${app.apkFileName}.apk`) : defaultFileName;
+    const { url: finalDownloadUrl, fileName, isDirect } = buildDownloadUrl(
+      app.downloadUrl,
+      app.apkFileName,
+      app.name
+    );
 
     const link = document.createElement('a');
-    link.href = app.downloadUrl;
+    link.href = finalDownloadUrl;
     link.setAttribute('download', fileName);
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
+
+    // CRITICAL: Do NOT set target="_blank" for direct APK downloads!
+    // When target="_blank" is used, mobile browsers navigate away to a blank tab on the Supabase domain,
+    // which displays an external grey warning popup sheet. By leaving target unset and using
+    // Content-Disposition: attachment, Chrome & Android stay on the current website and download directly in the background.
+    if (!isDirect) {
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+    }
+
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    setTimeout(() => {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+    }, 200);
   };
 
   // Secret footer click to open admin

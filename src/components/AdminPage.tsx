@@ -10,7 +10,8 @@ import { INITIAL_APPS, changeAdminPassword, verifyAdminPassword } from '../data'
 import { 
   getSupabaseCredentials, saveSupabaseCredentials, isSupabaseConfigured,
   fetchSupabaseApps, upsertSupabaseApp, deleteSupabaseApp, 
-  fetchSupabaseSettings, updateSupabaseSettings, uploadSupabaseApk 
+  fetchSupabaseSettings, updateSupabaseSettings, uploadSupabaseApk,
+  buildDownloadUrl
 } from '../supabaseClient';
 import './AdminPage.css';
 
@@ -137,8 +138,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   };
 
   // Clean default APK file name derived from app name
-  const getDefaultApkName = () => {
-    const safe = (name.trim() || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const getDefaultApkName = (customName?: string) => {
+    const raw = (customName || name).trim() || 'app';
+    const safe = raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return `${safe || 'app'}.apk`;
   };
 
@@ -150,6 +152,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     if (originalApkName) {
       setApkFileName(originalApkName);
     }
+  };
+
+  // Helper to sanitize any raw filename by removing random affiliate/hash suffixes
+  const cleanRawApkName = (rawName: string) => {
+    let clean = (rawName || '').replace(/\.apk$/i, '');
+    // Strip random trailing codes like _P4C61LFDRVH, _7V9C7R2PJKM__1_, _SDN7T6U1V81, __1_
+    clean = clean.replace(/_[A-Za-z0-9]{8,15}$/, '').replace(/__\d+_$/, '').replace(/__\d+$/, '');
+    return `${clean}.apk`;
   };
 
   // Handle APK File Upload
@@ -167,20 +177,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     // Auto-calculate size in MB
     const calculatedSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
     setSize(calculatedSize);
-    setOriginalApkName(file.name);
 
-    // Set default clean download filename
-    const defaultName = getDefaultApkName();
+    // Clean device filename: remove any random affiliate hashes
+    const cleanOriginal = cleanRawApkName(file.name);
+    setOriginalApkName(cleanOriginal);
+
+    // Set default clean download filename (use app name if present, else cleaned uploaded name)
+    const defaultName = name.trim() ? getDefaultApkName() : cleanOriginal;
     setApkFileName(defaultName);
 
     // Try Supabase Storage upload
     if (isSupabaseConfigured()) {
       try {
-        const result = await uploadSupabaseApk(file);
+        const result = await uploadSupabaseApk(file, defaultName);
         if (result.url) {
           setDownloadUrl(result.url);
           setIsUploadingApk(false);
-          setFormSuccess(`APK file "${file.name}" (${calculatedSize}) uploaded to Cloud Storage successfully! Permanent download link ready.`);
+          setFormSuccess(`APK file "${defaultName}" (${calculatedSize}) uploaded to Cloud Storage successfully! Permanent download link ready.`);
           return;
         } else {
           setIsUploadingApk(false);
@@ -209,8 +222,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setEditingAppId(app.id);
     setName(app.name);
     setDownloadUrl(app.downloadUrl);
-    setApkFileName(app.apkFileName || '');
-    setOriginalApkName(app.apkFileName || '');
+
+    // Clean APK name (removing any random numbers or affiliate hashes from older uploads)
+    const cleanApk = cleanRawApkName(app.apkFileName || app.name || '');
+    setApkFileName(cleanApk);
+    setOriginalApkName(cleanApk);
+
     setButtonText(app.buttonText || 'Download APK');
     setLogo(app.logo);
     setLogoPreview(app.logo);
@@ -285,14 +302,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       }
     }
 
-    const resolvedApkFileName = apkFileName.trim() || getDefaultApkName();
+    const { url: resolvedDownloadUrl, fileName: resolvedApkFileName } = buildDownloadUrl(
+      downloadUrl,
+      apkFileName,
+      name
+    );
 
     if (editingAppId) {
       // Update existing
       const updatedItem: AppItem = {
         id: editingAppId,
         name: name.trim(),
-        downloadUrl: downloadUrl.trim(),
+        downloadUrl: resolvedDownloadUrl,
         apkFileName: resolvedApkFileName,
         buttonText: buttonText.trim() || 'Download APK',
         logo: logo.trim() || '/uploads/logos/nexo.svg',
@@ -323,7 +344,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       const newApp: AppItem = {
         id: 'app-' + Date.now(),
         name: name.trim(),
-        downloadUrl: downloadUrl.trim(),
+        downloadUrl: resolvedDownloadUrl,
         apkFileName: resolvedApkFileName,
         buttonText: buttonText.trim() || 'Download APK',
         logo: logo.trim() || '/uploads/logos/nexo.svg',
@@ -833,7 +854,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                           <td>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                               <a 
-                                href={app.downloadUrl} 
+                                href={buildDownloadUrl(app.downloadUrl, app.apkFileName, app.name).url} 
                                 target="_blank" 
                                 rel="noreferrer" 
                                 className="btn-secondary-light" 
@@ -913,7 +934,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
                       <div className="mobile-item-actions">
                         <a 
-                          href={app.downloadUrl} 
+                          href={buildDownloadUrl(app.downloadUrl, app.apkFileName, app.name).url} 
                           target="_blank" 
                           rel="noreferrer" 
                           className="btn-secondary-light" 
@@ -1151,7 +1172,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                                 <span>Android will prompt user to install with this file name. Keep default or customize.</span>
                                 {downloadUrl && (
                                   <a 
-                                    href={downloadUrl} 
+                                    href={buildDownloadUrl(downloadUrl, apkFileName, name).url} 
                                     target="_blank" 
                                     rel="noreferrer" 
                                     style={{ color: '#4f46e5', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}

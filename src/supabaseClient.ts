@@ -128,14 +128,73 @@ export interface UploadApkResult {
 }
 
 /**
+ * Construct a direct, clean download URL and filename.
+ * Handles Supabase Storage URLs by adding ?download=fileName to enforce Content-Disposition: attachment
+ * and strips any trailing random hashes (like _P4C61LFDRVH or __1_) from the filename.
+ */
+export function buildDownloadUrl(rawUrl: string, rawFileName?: string, appName?: string): {
+  url: string;
+  fileName: string;
+  isDirect: boolean;
+} {
+  const url = (rawUrl || '').trim();
+  let fileName = (rawFileName || '').trim();
+
+  // If no filename provided, generate a clean one from app name
+  if (!fileName) {
+    const safe = (appName || 'app').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    fileName = `${safe || 'app'}.apk`;
+  }
+
+  // Ensure clean filename: strip random device/affiliate hash suffixes
+  fileName = fileName.replace(/\.apk$/i, '');
+  fileName = fileName.replace(/_[A-Za-z0-9]{8,15}$/, '').replace(/__\d+$/, '').replace(/__\d+_$/, '');
+  if (!fileName.toLowerCase().endsWith('.apk')) {
+    fileName = `${fileName}.apk`;
+  }
+
+  const isSupabase = url.includes('supabase.co/storage/v1/object/public/');
+  const isDirect = isSupabase || url.toLowerCase().endsWith('.apk') || url.includes('?download=');
+
+  if (isSupabase) {
+    const baseUrl = url.split('?')[0];
+    return {
+      url: `${baseUrl}?download=${encodeURIComponent(fileName)}`,
+      fileName,
+      isDirect
+    };
+  }
+
+  return {
+    url,
+    fileName,
+    isDirect
+  };
+}
+
+/**
  * Upload an APK file directly to Supabase storage if available
  */
-export async function uploadSupabaseApk(file: File): Promise<UploadApkResult> {
+export async function uploadSupabaseApk(file: File, preferredName?: string): Promise<UploadApkResult> {
   const client = getSupabaseClient();
   if (!client) return { url: null, error: 'Supabase client is not configured' };
   try {
-    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `${Date.now()}_${cleanName}`;
+    let cleanName = '';
+    if (preferredName && preferredName.trim()) {
+      cleanName = preferredName.trim();
+    } else {
+      // Strip trailing random affiliate / package hashes from file name
+      let base = file.name.replace(/\.apk$/i, '');
+      base = base.replace(/_[A-Za-z0-9]{8,15}$/, '').replace(/__\d+_$/, '').replace(/__\d+$/, '');
+      cleanName = base.replace(/[^a-zA-Z0-9.-]/g, '_');
+    }
+
+    if (!cleanName.toLowerCase().endsWith('.apk')) {
+      cleanName = `${cleanName}.apk`;
+    }
+
+    const safeStorageName = cleanName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `${Date.now()}_${safeStorageName}`;
     const { error } = await client.storage
       .from('apks')
       .upload(filePath, file, {
@@ -150,7 +209,8 @@ export async function uploadSupabaseApk(file: File): Promise<UploadApkResult> {
     }
 
     const { data } = client.storage.from('apks').getPublicUrl(filePath);
-    return { url: data.publicUrl };
+    const publicUrlWithDownload = `${data.publicUrl}?download=${encodeURIComponent(cleanName)}`;
+    return { url: publicUrlWithDownload };
   } catch (err: any) {
     console.error('Error uploading APK to Supabase:', err);
     return { url: null, error: err?.message || 'Storage upload failed' };
