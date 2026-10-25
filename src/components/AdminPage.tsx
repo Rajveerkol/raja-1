@@ -395,16 +395,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
   };
 
-  // Reset to Default Starter Apps
+  // Sync Apps from Cloud Database
   const handleResetApps = async () => {
-    if (window.confirm('Reset all apps to original 12 starter apps from screenshot?')) {
-      setApps(INITIAL_APPS);
+    if (window.confirm('Re-sync and fetch latest apps from Cloud Database?')) {
       if (isSupabaseConfigured()) {
-        for (const app of INITIAL_APPS) {
-          await upsertSupabaseApp(app);
+        const fresh = await fetchSupabaseApps();
+        if (fresh && fresh.length > 0) {
+          setApps(fresh);
+          setFormSuccess('Apps synchronized from Cloud Database successfully!');
+          return;
         }
       }
-      alert('Apps reset to original screenshot data!');
+      alert('Cloud Database is up to date.');
     }
   };
 
@@ -775,9 +777,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     type="button" 
                     className="btn-secondary-light"
                     onClick={handleResetApps}
-                    title="Reset to original 12 starter apps"
+                    title="Re-sync apps from Cloud Database"
                   >
-                    <RotateCcw size={15} /> Reset
+                    <RotateCcw size={15} /> Sync DB
                   </button>
                 </div>
               </div>

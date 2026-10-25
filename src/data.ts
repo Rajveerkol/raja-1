@@ -1,175 +1,6 @@
 import { AppItem, SiteSettings } from './types';
 
-export const INITIAL_APPS: AppItem[] = [
-  {
-    id: 'app-1',
-    name: 'Nexo 45',
-    logo: '/uploads/logos/nexo.svg',
-    downloadUrl: 'https://example.com/download/nexo45',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '52 MB',
-    downloads: 12450,
-    status: 'active',
-    sortOrder: 1,
-    description: 'High-speed thrilling arcade gaming experience with verified security.'
-  },
-  {
-    id: 'app-2',
-    name: 'Classic 200',
-    logo: '/uploads/logos/classic200.svg',
-    downloadUrl: 'https://example.com/download/classic200',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '64 MB',
-    downloads: 9820,
-    status: 'active',
-    sortOrder: 2,
-    description: 'Retro classic gaming reimagined with modern controls.'
-  },
-  {
-    id: 'app-3',
-    name: 'Khelo 567',
-    logo: '/uploads/logos/khelo567.svg',
-    downloadUrl: 'https://example.com/download/khelo567',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '48 MB',
-    downloads: 24100,
-    status: 'active',
-    sortOrder: 3,
-    description: 'Popular multiplayer gaming portal with instant rewards.'
-  },
-  {
-    id: 'app-4',
-    name: 'Fifa 202',
-    logo: '/uploads/logos/fifa202.svg',
-    downloadUrl: 'https://example.com/download/fifa202',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '78 MB',
-    downloads: 31500,
-    status: 'active',
-    sortOrder: 4,
-    description: 'Championship football tournament simulation with updated rosters.'
-  },
-  {
-    id: 'app-5',
-    name: 'Ram 404',
-    logo: '/uploads/logos/ram404.svg',
-    downloadUrl: 'https://example.com/download/ram404',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Utilities',
-    size: '24 MB',
-    downloads: 8740,
-    status: 'active',
-    sortOrder: 5,
-    description: 'Ultra-light memory booster and device performance utility.'
-  },
-  {
-    id: 'app-6',
-    name: 'Mkm Vex',
-    logo: '/uploads/logos/mkmvex.svg',
-    downloadUrl: 'https://example.com/download/mkmvex',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '60 MB',
-    downloads: 15320,
-    status: 'active',
-    sortOrder: 6,
-    description: 'Fast action survival platformer with custom levels.'
-  },
-  {
-    id: 'app-7',
-    name: 'Aqua 888',
-    logo: '/uploads/logos/aqua888.svg',
-    downloadUrl: 'https://example.com/download/aqua888',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '55 MB',
-    downloads: 18900,
-    status: 'active',
-    sortOrder: 7,
-    description: 'Underwater ocean exploration and puzzle adventure.'
-  },
-  {
-    id: 'app-8',
-    name: 'Zivo 67',
-    logo: '/uploads/logos/zivo67.svg',
-    downloadUrl: 'https://example.com/download/zivo67',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '42 MB',
-    downloads: 11200,
-    status: 'active',
-    sortOrder: 8,
-    description: 'Strategic racing and arena battle royale.'
-  },
-  {
-    id: 'app-9',
-    name: 'Yoho 888',
-    logo: '/uploads/logos/yoho888.svg',
-    downloadUrl: 'https://example.com/download/yoho888',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '50 MB',
-    downloads: 14750,
-    status: 'active',
-    sortOrder: 9,
-    description: 'Multiplayer social party games with live chat.'
-  },
-  {
-    id: 'app-10',
-    name: 'Ludo 567',
-    logo: '/uploads/logos/ludo567.svg',
-    downloadUrl: 'https://example.com/download/ludo567',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '38 MB',
-    downloads: 45200,
-    status: 'active',
-    sortOrder: 10,
-    description: 'The classic Indian board game with friends and online multiplayer.'
-  },
-  {
-    id: 'app-11',
-    name: 'Classic 500',
-    logo: '/uploads/logos/classic500.svg',
-    downloadUrl: 'https://example.com/download/classic500',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '68 MB',
-    downloads: 13400,
-    status: 'active',
-    sortOrder: 11,
-    description: 'Card and strategic board challenges.'
-  },
-  {
-    id: 'app-12',
-    name: 'Monkey games',
-    logo: '/uploads/logos/monkeygames.svg',
-    downloadUrl: 'https://example.com/download/monkeygames',
-    rating: 4.9,
-    badge: 'Verified',
-    category: 'Games',
-    size: '72 MB',
-    downloads: 22100,
-    status: 'active',
-    sortOrder: 12,
-    description: 'Jungle runner and acrobatic swinging obstacles.'
-  }
-];
+export const INITIAL_APPS: AppItem[] = [];
 
 export const INITIAL_SETTINGS: SiteSettings = {
   siteName: 'Appvizo',
@@ -193,14 +24,25 @@ export function loadStoredApps(): AppItem[] {
     const raw = localStorage.getItem(APPS_STORAGE_KEY) ?? localStorage.getItem(LEGACY_APPS_STORAGE_KEY);
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Detect and purge old mock dummy apps (Classic 200, Khelo 567, Mkm Vex, Aqua 888, or app-1..12 IDs)
+        const hasLegacyDummy = parsed.some(
+          a => (typeof a.id === 'string' && /^app-(1[0-2]|[1-9])$/.test(a.id)) ||
+               a.name === 'Classic 200' || a.name === 'Khelo 567' || a.name === 'Mkm Vex' ||
+               a.name === 'Aqua 888' || a.name === 'Yoho 888' || a.name === 'Monkey games' || a.name === 'Ludo 567'
+        );
+        if (hasLegacyDummy) {
+          localStorage.removeItem(APPS_STORAGE_KEY);
+          localStorage.removeItem(LEGACY_APPS_STORAGE_KEY);
+          return [];
+        }
         return parsed;
       }
     }
   } catch (err) {
     console.error('Error loading stored apps', err);
   }
-  return INITIAL_APPS;
+  return [];
 }
 
 export function saveStoredApps(apps: AppItem[]): void {
