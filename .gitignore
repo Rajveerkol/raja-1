@@ -26,3 +26,11 @@ dist-ssr
 # Environment variables
 .env
 .env.production
+.dev.vars
+.dev.vars.*
+.wrangler/
+_worker.bundle
+_worker.js
+scratch/
+backup/
+cloudflare/

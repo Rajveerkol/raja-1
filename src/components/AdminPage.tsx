@@ -8,11 +8,17 @@ import {
 import { AppItem, SiteSettings } from '../types';
 import { INITIAL_APPS, changeAdminPassword, verifyAdminPassword } from '../data';
 import { 
-  getSupabaseCredentials, saveSupabaseCredentials, isSupabaseConfigured,
-  fetchSupabaseApps, upsertSupabaseApp, deleteSupabaseApp, 
-  fetchSupabaseSettings, updateSupabaseSettings, uploadSupabaseApk,
-  buildDownloadUrl
-} from '../supabaseClient';
+  getSupabaseCredentials, saveSupabaseCredentials, 
+  isCloudflareConfigured as isSupabaseConfigured,
+  fetchCloudflareApps as fetchSupabaseApps, 
+  upsertCloudflareApp as upsertSupabaseApp, 
+  deleteCloudflareApp as deleteSupabaseApp, 
+  fetchCloudflareSettings as fetchSupabaseSettings, 
+  updateCloudflareSettings as updateSupabaseSettings, 
+  uploadCloudflareApk as uploadSupabaseApk,
+  buildCloudflareDownloadUrl as buildDownloadUrl,
+  loginAdmin, logoutAdmin, checkAdminSession
+} from '../cloudflareClient';
 import './AdminPage.css';
 
 interface AdminPageProps {
@@ -91,7 +97,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Save auth to sessionStorage
+  // Verify server-side HttpOnly session cookie on mount
+  useEffect(() => {
+    checkAdminSession().then(valid => {
+      if (valid) {
+        setIsAuthenticated(true);
+      }
+    });
+  }, []);
+
+  // Save auth to sessionStorage for fallback UI state
   useEffect(() => {
     if (isAuthenticated) {
       sessionStorage.setItem('appvizo_admin_auth', 'true');
@@ -101,19 +116,25 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
   }, [isAuthenticated]);
 
-  // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
+  // Handle Login via Cloudflare Pages Function (Server-verified HttpOnly cookie session)
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (verifyAdminPassword(passwordInput)) {
-      setIsAuthenticated(true);
-      setLoginError('');
-      setPasswordInput('');
-    } else {
-      setLoginError('Invalid password. Please try again.');
+    setLoginError('');
+    try {
+      const res = await loginAdmin(passwordInput);
+      if (res.success) {
+        setIsAuthenticated(true);
+        setPasswordInput('');
+      } else {
+        setLoginError(res.error || 'Invalid password. Please try again.');
+      }
+    } catch (err: any) {
+      setLoginError(err?.message || 'Login failed. Please try again.');
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutAdmin();
     setIsAuthenticated(false);
     sessionStorage.removeItem('appvizo_admin_auth');
     sessionStorage.removeItem('raxo_admin_auth');

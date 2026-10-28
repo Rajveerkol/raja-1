@@ -15,7 +15,7 @@ Official repository for **Appvizo** — A modern, high-performance Apps & Games 
 ## 🔑 Admin Panel Access & Security
 
 - **Direct URL:** `/admin` (e.g. `https://your-domain/admin` or `http://localhost:3000/admin`)
-- **Default Password:** `Rockpubg44@`
+- **Password:** Configured via Cloudflare Pages environment secret `ADMIN_PASSWORD` (never hardcoded in source code).
 - **Other Shortcuts:**
   - Keyboard shortcut: `Ctrl + Shift + A` (Mac: `Cmd + Shift + A`)
   - Search trigger: Search bar me `admin` likhein aur Lock 🔒 icon dabayein

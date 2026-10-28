@@ -10,10 +10,13 @@ import {
   saveStoredSettings, incrementDownloadCount 
 } from './data';
 import { 
-  isSupabaseConfigured, fetchSupabaseApps, 
-  fetchSupabaseSettings, incrementSupabaseDownloads,
-  upsertSupabaseApp, buildDownloadUrl
-} from './supabaseClient';
+  isCloudflareConfigured as isSupabaseConfigured, 
+  fetchCloudflareApps as fetchSupabaseApps, 
+  fetchCloudflareSettings as fetchSupabaseSettings, 
+  incrementCloudflareDownloads as incrementSupabaseDownloads,
+  upsertCloudflareApp as upsertSupabaseApp, 
+  buildCloudflareDownloadUrl as buildDownloadUrl
+} from './cloudflareClient';
 import { AdminPage } from './components/AdminPage';
 import { LegalModals, LegalModalType } from './components/LegalModals';
 import './App.css';

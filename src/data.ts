@@ -88,14 +88,13 @@ export function saveStoredSettings(settings: SiteSettings): void {
 export function verifyAdminPassword(inputPassword: string): boolean {
   try {
     const savedPassword = localStorage.getItem(PASSWORD_STORAGE_KEY) || localStorage.getItem(LEGACY_PASSWORD_STORAGE_KEY);
-    if (savedPassword && savedPassword !== 'admin123') {
+    if (savedPassword) {
       return inputPassword.trim() === savedPassword.trim();
     }
   } catch (e) {
     // fallback
   }
-  // Updated password requested by user
-  return inputPassword.trim() === 'Rockpubg44@';
+  return false;
 }
 
 export function changeAdminPassword(newPassword: string): void {
