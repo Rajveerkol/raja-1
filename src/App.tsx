@@ -416,7 +416,8 @@ export function App() {
                     src={app.logo} 
                     alt={`${app.name} icon`} 
                     className="card-icon-img"
-                    loading="lazy"
+                    loading="eager"
+                    decoding="async"
                     referrerPolicy="no-referrer"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text x='50' y='58' font-size='32' font-weight='bold' fill='%23ffffff' text-anchor='middle'>${encodeURIComponent(app.name.slice(0, 2).toUpperCase())}</text></svg>`;
