@@ -82,7 +82,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const apps = (results || []).map(formatRowToAppItem);
 
     return jsonResponse(apps, 200, {
-      'Cache-Control': 'public, max-age=60, stale-while-revalidate=300'
+      'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=600'
     });
   } catch (err: any) {
     return errorResponse(`Failed to fetch apps: ${err?.message || 'Database error'}`, 500);
