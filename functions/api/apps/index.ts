@@ -116,7 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!name) return errorResponse('Field "name" is required', 400);
 
   // 3. Prevent Base64 Image Embedding in D1
-  if (logo.startsWith('data:image') || logo.length > 500) {
+  if (logo.startsWith('data:') || logo.length > 8192) {
     return errorResponse('Base64 image embedding is forbidden. Please upload logo to R2 storage.', 400);
   }
 

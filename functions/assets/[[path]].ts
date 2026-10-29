@@ -45,10 +45,15 @@ export const onRequestGet: PagesFunction<Env, 'path'> = async (context) => {
   if (isLogo) {
     const ext = filename.split('.').pop()?.toLowerCase();
     if (ext === 'png') contentType = 'image/png';
-    else if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
+    else if (ext === 'jpg' || ext === 'jpeg' || ext === 'jfif') contentType = 'image/jpeg';
     else if (ext === 'webp') contentType = 'image/webp';
+    else if (ext === 'svg') contentType = 'image/svg+xml';
+    else if (ext === 'gif') contentType = 'image/gif';
+    else if (ext === 'avif') contentType = 'image/avif';
+    else if (ext === 'ico') contentType = 'image/x-icon';
+    else if (ext === 'bmp') contentType = 'image/bmp';
     else {
-      return errorResponse('Unsupported image format', 400);
+      contentType = 'image/png';
     }
   } else if (isApk) {
     if (!filename.toLowerCase().endsWith('.apk')) {
@@ -76,6 +81,7 @@ export const onRequestGet: PagesFunction<Env, 'path'> = async (context) => {
       status: 304,
       headers: {
         'ETag': object.httpEtag,
+        'Access-Control-Allow-Origin': '*',
         'Cache-Control': isLogo 
           ? 'public, max-age=604800, stale-while-revalidate=86400' 
           : 'public, max-age=86400'
@@ -88,6 +94,7 @@ export const onRequestGet: PagesFunction<Env, 'path'> = async (context) => {
   headers.set('Content-Type', contentType);
   headers.set('Content-Length', object.size.toString());
   headers.set('ETag', object.httpEtag);
+  headers.set('Access-Control-Allow-Origin', '*');
 
   if (isLogo) {
     // 7 days browser cache, 1 day stale-while-revalidate for logos
