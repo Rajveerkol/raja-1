@@ -16,6 +16,7 @@ import {
   fetchCloudflareSettings as fetchSupabaseSettings, 
   updateCloudflareSettings as updateSupabaseSettings, 
   uploadCloudflareApk as uploadSupabaseApk,
+  uploadCloudflareLogo,
   buildCloudflareDownloadUrl as buildDownloadUrl,
   loginAdmin, logoutAdmin, checkAdminSession
 } from '../cloudflareClient';
@@ -36,10 +37,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   setSettings,
   onNavigateHome
 }) => {
-  // Session authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('appvizo_admin_auth') === 'true' || sessionStorage.getItem('raxo_admin_auth') === 'true';
-  });
+  // Session authentication state - verified directly with server
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
 
   // Login form state
   const [passwordInput, setPasswordInput] = useState('');
@@ -99,16 +99,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   // Verify server-side HttpOnly session cookie on mount
   useEffect(() => {
+    let isMounted = true;
     checkAdminSession().then(valid => {
-      if (valid) {
-        setIsAuthenticated(true);
+      if (!isMounted) return;
+      setIsAuthenticated(valid);
+      if (!valid) {
+        sessionStorage.removeItem('appvizo_admin_auth');
+        sessionStorage.removeItem('raxo_admin_auth');
+      }
+      setIsCheckingAuth(false);
+    }).catch(() => {
+      if (isMounted) {
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
       }
     });
+    return () => { isMounted = false; };
   }, []);
 
   // Save auth to sessionStorage for fallback UI state
   useEffect(() => {
     if (isAuthenticated) {
+      sessionStorage.setItem('raxo_admin_auth', 'true');
       sessionStorage.setItem('appvizo_admin_auth', 'true');
     } else {
       sessionStorage.removeItem('appvizo_admin_auth');
@@ -124,7 +136,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       const res = await loginAdmin(passwordInput);
       if (res.success) {
         setIsAuthenticated(true);
+        sessionStorage.setItem('raxo_admin_auth', 'true');
+        sessionStorage.setItem('appvizo_admin_auth', 'true');
         setPasswordInput('');
+        const fresh = await fetchSupabaseApps(5000, true);
+        if (fresh && fresh.length > 0) {
+          setApps(fresh);
+        }
       } else {
         setLoginError(res.error || 'Invalid password. Please try again.');
       }
@@ -140,21 +158,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     sessionStorage.removeItem('raxo_admin_auth');
   };
 
-  // Handle Logo Upload (Base64 Data URL)
-  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Logo Upload (Upload to Cloudflare R2)
+  const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setFormError('Image file is too large (max 5MB)');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setLogo(result);
-        setLogoPreview(result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const result = await uploadCloudflareLogo(file);
+        if (result.url) {
+          setLogo(result.url);
+          setLogoPreview(result.url);
+          setFormSuccess('Logo uploaded to R2 successfully!');
+        } else {
+          setFormError(result.error || 'Failed to upload logo to R2');
+        }
+      } catch (err: any) {
+        setFormError(err?.message || 'Error uploading logo');
+      }
     }
   };
 
@@ -257,7 +280,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setCategory(app.category);
     setSize(app.size);
     setSortOrder(app.sortOrder);
-    setStatus(app.status);
+    setStatus(app.status === 'inactive' ? 'inactive' : 'active');
     setDescription(app.description || '');
 
     // Detect if current downloadUrl is an uploaded APK file or an external URL link
@@ -348,12 +371,21 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         description: description.trim()
       };
 
+      const res = await upsertSupabaseApp(updatedItem);
+      if (!res.success) {
+        if (res.status === 401 || res.error?.includes('Unauthorized')) {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem('appvizo_admin_auth');
+          sessionStorage.removeItem('raxo_admin_auth');
+          setLoginError('Your admin session has expired. Please enter password to log in again.');
+          return;
+        }
+        setFormError(res.error || 'Failed to save application to database.');
+        return;
+      }
+
       const updated = apps.map(app => (app.id === editingAppId ? updatedItem : app));
       setApps(updated);
-
-      if (isSupabaseConfigured()) {
-        await upsertSupabaseApp(updatedItem);
-      }
 
       setFormSuccess(`App "${name}" updated & saved to Database successfully!`);
       setTimeout(() => {
@@ -379,11 +411,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         description: description.trim()
       };
 
-      setApps([newApp, ...apps]);
-
-      if (isSupabaseConfigured()) {
-        await upsertSupabaseApp(newApp);
+      const res = await upsertSupabaseApp(newApp);
+      if (!res.success) {
+        if (res.status === 401 || res.error?.includes('Unauthorized')) {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem('appvizo_admin_auth');
+          sessionStorage.removeItem('raxo_admin_auth');
+          setLoginError('Your admin session has expired. Please enter password to log in again.');
+          return;
+        }
+        setFormError(res.error || 'Failed to save application to database.');
+        return;
       }
+
+      setApps([newApp, ...apps]);
 
       setFormSuccess(`App "${name}" published & saved to Database successfully!`);
       setTimeout(() => {
@@ -396,10 +437,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Delete App
   const handleDeleteApp = async (id: string, appName: string) => {
     if (window.confirm(`Are you sure you want to delete "${appName}"?`)) {
-      setApps(apps.filter(a => a.id !== id));
-      if (isSupabaseConfigured()) {
-        await deleteSupabaseApp(id);
+      const res = await deleteSupabaseApp(id);
+      if (!res.success) {
+        if (res.status === 401 || res.error?.includes('Unauthorized')) {
+          setIsAuthenticated(false);
+          sessionStorage.removeItem('appvizo_admin_auth');
+          sessionStorage.removeItem('raxo_admin_auth');
+          alert('Your admin session has expired. Please log in again.');
+          return;
+        }
+        alert(`Failed to delete "${appName}": ${res.error || 'Server error'}`);
+        return;
       }
+      setApps(apps.filter(a => a.id !== id));
     }
   };
 
@@ -407,11 +457,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const handleClearAllApps = async () => {
     if (window.confirm('Are you sure you want to delete all listed applications? This will clear them from both the website and database.')) {
       const appsToDelete = [...apps];
-      setApps([]);
-      if (isSupabaseConfigured()) {
-        for (const app of appsToDelete) {
-          await deleteSupabaseApp(app.id);
+      let hasError = false;
+      for (const app of appsToDelete) {
+        const res = await deleteSupabaseApp(app.id);
+        if (!res.success) {
+          hasError = true;
+          if (res.status === 401) {
+            setIsAuthenticated(false);
+            alert('Your session has expired. Please log in again.');
+            return;
+          }
         }
+      }
+      if (!hasError) {
+        setApps([]);
+      } else {
+        const fresh = await fetchSupabaseApps(5000, true);
+        if (fresh) setApps(fresh);
       }
     }
   };
@@ -419,13 +481,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Sync Apps from Cloud Database
   const handleResetApps = async () => {
     if (window.confirm('Re-sync and fetch latest apps from Cloud Database?')) {
-      if (isSupabaseConfigured()) {
-        const fresh = await fetchSupabaseApps();
-        if (fresh && fresh.length > 0) {
-          setApps(fresh);
-          setFormSuccess('Apps synchronized from Cloud Database successfully!');
-          return;
-        }
+      const fresh = await fetchSupabaseApps(5000, true);
+      if (fresh && fresh.length > 0) {
+        setApps(fresh);
+        setFormSuccess('Apps synchronized from Cloud Database successfully!');
+        return;
       }
       alert('Cloud Database is up to date.');
     }
@@ -441,12 +501,21 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       footerText,
       telegramLink
     };
-    setSettings(newSettings);
 
-    if (isSupabaseConfigured()) {
-      await updateSupabaseSettings(newSettings);
+    const res = await updateSupabaseSettings(newSettings);
+    if (!res.success) {
+      if (res.status === 401 || res.error?.includes('Unauthorized')) {
+        setIsAuthenticated(false);
+        sessionStorage.removeItem('appvizo_admin_auth');
+        sessionStorage.removeItem('raxo_admin_auth');
+        alert('Your admin session has expired. Please log in again.');
+        return;
+      }
+      alert(`Failed to update settings: ${res.error || 'Unknown error'}`);
+      return;
     }
 
+    setSettings(newSettings);
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 2000);
   };
@@ -526,6 +595,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const activeCount = apps.filter(a => a.status === 'active').length;
 
   // =========================================================================
+  // VIEW 0: Session Checking Spinner
+  // =========================================================================
+  if (isCheckingAuth) {
+    return (
+      <div className="admin-page-root admin-login-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ color: '#6366f1', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem', fontWeight: 600 }}>
+          <RefreshCw className="animate-spin" size={20} />
+          <span>Verifying administrator session...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
   // VIEW 1: Dedicated Full Page Login Screen
   // =========================================================================
   if (!isAuthenticated) {
@@ -535,7 +618,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="login-brand-icon">
             <Rocket size={28} />
           </div>
-          <h1 className="login-title">Appvizo Admin Portal</h1>
+          <h1 className="login-title">{settings.siteName || 'Raxo'} Admin Portal</h1>
           <p className="login-subtitle">
             Sign in with your administrator password to manage applications, download links, and database settings.
           </p>
@@ -624,7 +707,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="admin-brand-title">Appvizo</span>
+                <span className="admin-brand-title">{settings.siteName || 'Raxo'}</span>
                 <span className="admin-badge-role">Admin Console</span>
                 {isSupabaseConfigured() && (
                   <span style={{ fontSize: '0.72rem', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -684,7 +767,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             onClick={() => setActiveTab('supabase')}
           >
             <Database size={17} />
-            <span>Supabase Database</span>
+            <span>Cloud Database</span>
           </button>
           <button 
             type="button" 
@@ -1368,94 +1451,56 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         )}
 
         {/* =================================================================
-            TAB 3: Supabase Database Configuration
+            TAB 3: Cloudflare Database & Storage Status
             ================================================================= */}
         {activeTab === 'supabase' && (
           <div className="admin-content-card">
             <div className="card-topbar">
               <h2 className="card-topbar-title">
                 <Database size={20} color="#059669" />
-                <span>Supabase Cloud Database</span>
+                <span>Cloudflare D1 &amp; R2 Architecture</span>
               </h2>
             </div>
 
             <div className="admin-form-container">
               <p style={{ color: '#64748b', fontSize: '0.92rem', marginBottom: '20px' }}>
-                Your Appvizo application is connected to Supabase PostgreSQL cloud for live synchronization across all devices and visitors.
+                Your Raxo application runs on a fully isolated, production-grade Cloudflare stack. Database and file storage are completely integrated with Cloudflare D1 and R2.
               </p>
 
-              {sbStatus && (
-                <div style={{
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  fontSize: '0.88rem',
-                  marginBottom: '18px',
-                  background: sbStatus.includes('Connected') || sbStatus.includes('Uploaded') ? '#ecfdf5' : '#fef2f2',
-                  border: `1px solid ${sbStatus.includes('Connected') || sbStatus.includes('Uploaded') ? '#a7f3d0' : '#fecaca'}`,
-                  color: sbStatus.includes('Connected') || sbStatus.includes('Uploaded') ? '#065f46' : '#dc2626'
-                }}>
-                  {sbStatus}
-                </div>
-              )}
-
-              <form onSubmit={handleSaveSupabase}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                  <div>
-                    <label className="field-label">Supabase Project URL</label>
-                    <input 
-                      type="url" 
-                      className="field-input" 
-                      value={sbUrl}
-                      onChange={e => setSbUrl(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="field-label">Supabase Anon Public API Key</label>
-                    <input 
-                      type="password" 
-                      className="field-input" 
-                      value={sbKey}
-                      onChange={e => setSbKey(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button type="submit" className="btn-primary-purple" disabled={sbLoading}>
-                      {sbLoading ? 'Checking...' : 'Save & Test Connection'}
-                    </button>
-
-                    <button 
-                      type="button" 
-                      className="btn-secondary-light"
-                      onClick={handleSyncLocalToSupabase}
-                      disabled={sbLoading}
-                    >
-                      <RefreshCw size={15} /> Upload All Apps to Supabase
-                    </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>D1 Database</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '6px 0 2px' }}>raxo-db</div>
+                  <div style={{ fontSize: '0.82rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+                    <CheckCircle2 size={14} /> Active &amp; Bound (apps &amp; settings)
                   </div>
                 </div>
-              </form>
 
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', marginTop: '24px' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.98rem', marginBottom: '8px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Package size={18} color="#4f46e5" />
-                  <span>Cloud APK Storage Setup (Required for Direct APK Uploads)</span>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>R2 Object Storage</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '6px 0 2px' }}>raxo-assets</div>
+                  <div style={{ fontSize: '0.82rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+                    <CheckCircle2 size={14} /> Active &amp; Bound (logos/ &amp; apks/)
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.6, marginBottom: '12px' }}>
-                  To allow direct <code>.apk</code> uploads from the Admin panel without using external links, create a public bucket named <strong>apks</strong> in your Supabase project:
-                </p>
-                <ol style={{ fontSize: '0.84rem', color: '#334155', lineHeight: 1.7, paddingLeft: '20px', marginBottom: '14px' }}>
-                  <li>Open your <strong>Supabase Dashboard &gt; Storage</strong></li>
-                  <li>Click <strong>New Bucket</strong></li>
-                  <li>Name it <strong>apks</strong></li>
-                  <li>Toggle <strong>Public bucket</strong> to ON, then click <strong>Save</strong></li>
-                </ol>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-                  💡 <em>Alternatively: Open Supabase Dashboard &gt; <strong>SQL Editor</strong>, paste and run <code>supabase_schema.sql</code> to create both tables and the storage bucket automatically!</em>
-                </p>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Production Worker</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '6px 0 2px' }}>raja-1</div>
+                  <div style={{ fontSize: '0.82rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+                    <CheckCircle2 size={14} /> Live on raxo.online
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button 
+                  type="button" 
+                  className="btn-primary-purple"
+                  onClick={handleResetApps}
+                >
+                  <RefreshCw size={15} /> Re-Sync Applications from D1
+                </button>
               </div>
             </div>
           </div>

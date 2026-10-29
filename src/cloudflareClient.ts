@@ -23,14 +23,16 @@ export interface UploadAssetResult {
 /**
  * Fetch all apps from Cloudflare D1 with timeout guard
  */
-export async function fetchCloudflareApps(timeoutMs = 5000): Promise<AppItem[] | null> {
+export async function fetchCloudflareApps(timeoutMs = 5000, all = false): Promise<AppItem[] | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch('/api/apps', {
+    const url = all ? '/api/apps?all=true' : '/api/apps';
+    const res = await fetch(url, {
       method: 'GET',
-      headers: { 'Accept': 'application/json' },
+      headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' },
+      cache: 'no-cache',
       signal: controller.signal
     });
 
@@ -105,10 +107,16 @@ export async function incrementCloudflareDownloads(id: string): Promise<void> {
   }
 }
 
+export interface MutationResult {
+  success: boolean;
+  error?: string;
+  status?: number;
+}
+
 /**
  * Insert or Update an App in Cloudflare D1 (Admin protected)
  */
-export async function upsertCloudflareApp(app: AppItem): Promise<boolean> {
+export async function upsertCloudflareApp(app: AppItem): Promise<MutationResult> {
   try {
     const res = await fetch('/api/apps', {
       method: 'POST',
@@ -119,34 +127,42 @@ export async function upsertCloudflareApp(app: AppItem): Promise<boolean> {
       credentials: 'same-origin',
       body: JSON.stringify(app)
     });
-    return res.ok;
-  } catch (err) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error || `Server error (${res.status})`, status: res.status };
+    }
+    return { success: true };
+  } catch (err: any) {
     console.error('Failed to upsert app to Cloudflare D1:', err);
-    return false;
+    return { success: false, error: err?.message || 'Network error' };
   }
 }
 
 /**
  * Delete an App from Cloudflare D1 (Admin protected)
  */
-export async function deleteCloudflareApp(id: string): Promise<boolean> {
+export async function deleteCloudflareApp(id: string): Promise<MutationResult> {
   try {
     const res = await fetch(`/api/apps/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: { 'Accept': 'application/json' },
       credentials: 'same-origin'
     });
-    return res.ok;
-  } catch (err) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error || `Server error (${res.status})`, status: res.status };
+    }
+    return { success: true };
+  } catch (err: any) {
     console.error('Failed to delete app from Cloudflare D1:', err);
-    return false;
+    return { success: false, error: err?.message || 'Network error' };
   }
 }
 
 /**
  * Update Site Settings in Cloudflare D1 (Admin protected)
  */
-export async function updateCloudflareSettings(settings: SiteSettings): Promise<boolean> {
+export async function updateCloudflareSettings(settings: SiteSettings): Promise<MutationResult> {
   try {
     const res = await fetch('/api/settings', {
       method: 'PUT',
@@ -157,10 +173,14 @@ export async function updateCloudflareSettings(settings: SiteSettings): Promise<
       credentials: 'same-origin',
       body: JSON.stringify(settings)
     });
-    return res.ok;
-  } catch (err) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: data?.error || `Server error (${res.status})`, status: res.status };
+    }
+    return { success: true };
+  } catch (err: any) {
     console.error('Failed to update settings in Cloudflare D1:', err);
-    return false;
+    return { success: false, error: err?.message || 'Network error' };
   }
 }
 
